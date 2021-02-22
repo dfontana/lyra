@@ -7,8 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hotkey = { path = "../hotkey" }
 keys = { path = "../keys" }
-rdev = "0.4.6"
+clap = "2.33.3"
 daemonize = "0.4.1"
 

@@ -1,49 +1,53 @@
+extern crate clap;
 extern crate daemonize;
 
-use hotkey::{Listener, HotkeyListener, ListenerHotkey, modifiers};
-use keys::{listen, Event, EventType};
-use std::{env::args, fs::File};
+use clap::{App, Arg};
+use keys::{Key, Keyset, Listener};
+use std::fs::File;
 
 use daemonize::Daemonize;
 
 fn main() {
-    run()
-    // let stdout = File::create("/tmp/daemon.out").unwrap();
-    // let stderr = File::create("/tmp/daemon.err").unwrap();
+  let matches = App::new("Lyra")
+    .arg(
+      Arg::with_name("foreground")
+        .short("f")
+        .help("Run Lyra in the foreground rather than as a daemon"),
+    )
+    .get_matches();
 
-    // let daemonize = Daemonize::new()
-    //     .pid_file("/tmp/daemon.pid")
-    //     .stdout(stdout)
-    //     .stderr(stderr)
-    //     .exit_action(|| println!("Executed before master process exits"));
+  if matches.is_present("foreground") {
+    println!("Launching foreground...");
+    run();
+    return;
+  }
 
-    // match daemonize.start() {
-    //     Ok(_) => run(),
-    //     Err(e) => eprintln!("Error, {}", e),
-    // }
+  println!("Starting Daemon...");
+  let stdout = File::create("/tmp/daemon.out").unwrap();
+  let stderr = File::create("/tmp/daemon.err").unwrap();
+
+  let daemonize = Daemonize::new()
+    .pid_file("/tmp/daemon.pid")
+    .stdout(stdout)
+    .stderr(stderr)
+    .exit_action(|| println!("Executed before master process exits"));
+
+  match daemonize.start() {
+    Ok(_) => run(),
+    Err(e) => eprintln!("Error, {}", e),
+  }
 }
 
 fn run() {
-    println!("Starting Daemon...");
-    // let hotkey1 = ListenerHotkey::new(modifiers::ALT, keys::D);
-    // let mut hk = Listener::new();
-    // hk.register_hotkey(
-    //     hotkey1,
-    //     || println!("Super-Alt-Space pressed!"),
-    // )
-    // .unwrap();
-    // loop {}
-
-    loop {
-        if let Err(error) = listen(callback) {
-            println!("Error: {:?}", error)
-        }
-    }
-}
-
-fn callback(event: Event) {
-    match event.event_type {
-        EventType::KeyPress(key) => println!("User wrote {:?}", key),
-        _ => ()
-    }
+  let mut l = Listener::new();
+  l.register(
+    Keyset {
+      key: Key::KeyA,
+      mods: vec![Key::ShiftLeft],
+    },
+    |_| {
+      println!("Hay");
+    },
+  );
+  l.listen().unwrap();
 }
