@@ -1,29 +1,89 @@
+use std::fmt::Display;
+
 pub type Callback = dyn 'static + Fn(Event) + Send;
 
+/// In the event a listner fails to operate, you may expect a ListenerError
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ListenError {
-  /// MacOS
+  /// MacOS specific, occurs when the system fails to tie into the global
+  /// event loop ("Tap", as it happens to be called in Apple land)
   EventTapError,
+
+  /// MacOS Specific, occurs when the system fails to register the loop
+  /// primitive against the host system.
   LoopSourceError,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Event {
   pub keyset: Keyset,
   pub action: Action,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl Event {
+  pub fn new(keyset: Keyset, action: Action) -> Event {
+    Event { keyset, action }
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Action {
   KeyPress,
   KeyRelease,
 }
 
+/// A representation of a [`Key`] and 0+ modifiers for matching against
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Keyset {
+  /// The invidiual [`Key`] of interest
   pub key: Key,
+  /// A series of modifier keys (alt, option, super, etc) that we should look for
+  /// when matching against [`Keyset::key`]. Including none means we won't look for
+  /// any during matching!
   pub mods: Vec<Key>,
+}
+
+impl Keyset {
+  /// Creates a new [`Keyset`]
+  pub fn new(key: Key, mods: Vec<Key>) -> Keyset {
+    Keyset { key, mods }
+  }
+}
+
+impl Default for Keyset {
+  /// Convenience for scenarios where one might need to initialize a bare variable
+  /// As a result we just pick [`Key::Alt`] for the sake of picking something.
+  fn default() -> Self {
+    Keyset {
+      key: Key::Alt,
+      mods: Vec::new(),
+    }
+  }
+}
+
+impl Display for Keyset {
+  /// Will render a [`Keyset`] in syntax of `{Modifiers-Key}`, just for legibility
+  /// in logs and such.
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let mods = self
+      .mods
+      .iter()
+      .map(Key::to_string)
+      .collect::<Vec<String>>()
+      .join("-");
+    if mods.is_empty() {
+      write!(f, "{{{}}}", self.key)
+    } else {
+      write!(f, "{{{}-{}}}", mods, self.key)
+    }
+  }
+}
+
+impl Display for Key {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{:?}", self)
+  }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
