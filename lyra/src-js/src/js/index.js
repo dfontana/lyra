@@ -1,2 +1,4 @@
-import { test } from './events/event';
-document.querySelector('#test').innerHTML = test('Cats Man');
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { App } from './app';
+ReactDOM.render(<App />, document.getElementById('root'));

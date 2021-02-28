@@ -15,7 +15,6 @@ WIP
   - [ ] Trigger open event on 'Enter'
   - [ ] Styling (Text, Background)
   - [ ] Animations
-  - [ ] Minify JS/CSS (may require bundler replacement)
 - [ ] Breakup main/refactor
 - [ ] Debug Logging
 - [ ] Bookmarklets
@@ -40,7 +39,7 @@ WIP
 
 ## Building
 
-- `yarn`/`npm` `install` to setup your env
-- `yarn --cwd src-js build && cargo run -- -f` to build & launch immediately
+- Ensure you have `yarn` installed globally.
+- Run a normal `cargo build`. This will handle initializing all the relevant JS pieces. See `build.rs` to explain this.
 
 You now have a statically compiled executable; inclusive of resources.
