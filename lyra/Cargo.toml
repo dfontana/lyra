@@ -1,15 +1,14 @@
 [package]
 name = "lyra"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["dfontana <dyfontana@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-tokio = { version = "1.2.0", features = ["full"] }
-keys = { path = "../keys" }
 clap = "2.33.3"
 daemonize = "0.4.1"
-wry = "0.5.0"
-
+include_dir = "0.6.0"
+keys = { path = "../keys" }
+thiserror = "1.0.24"
+tokio = { version = "1.2.0", features = ["full"] }
+wry = {git = "https://github.com/tauri-apps/wry", rev = "630189538295b2a9cd57ace4f502edb2538c09de"}

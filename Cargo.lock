@@ -821,6 +821,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glob"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
+
+[[package]]
 name = "gobject-sys"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -930,6 +936,36 @@ dependencies = [
  "scoped_threadpool",
  "tiff",
 ]
+
+[[package]]
+name = "include_dir"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23d58bdeb22b1c4691106c084b1063781904c35d0f22eda2a283598968eac61a"
+dependencies = [
+ "glob",
+ "include_dir_impl",
+ "proc-macro-hack",
+]
+
+[[package]]
+name = "include_dir_impl"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "327869970574819d24d1dca25c891856144d29159ab797fa9dc725c5c3f57215"
+dependencies = [
+ "anyhow",
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "infer"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8906512588cd815b8f759fd0ac11de2a84c985c0f792f70df611e9325c270c1f"
 
 [[package]]
 name = "instant"
@@ -1077,11 +1113,13 @@ dependencies = [
 
 [[package]]
 name = "lyra"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "daemonize",
+ "include_dir",
  "keys",
+ "thiserror",
  "tokio",
  "wry",
 ]
@@ -1395,6 +1433,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "915b1b472bc21c53464d6c8461c9d3af805ba1ef837e1cac254428f4a77177b1"
 dependencies = [
  "malloc_buf",
+]
+
+[[package]]
+name = "objc_id"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c92d4ddb4bd7b50d730c215ff871754d0da6b2178849f8a2a2ab69712d0c073b"
+dependencies = [
+ "objc",
 ]
 
 [[package]]
@@ -2209,9 +2256,9 @@ dependencies = [
 [[package]]
 name = "wry"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "860165cb99c55ae5da58684bb16ab0faf92488a735423bddb09410e787581901"
+source = "git+https://github.com/tauri-apps/wry?rev=630189538295b2a9cd57ace4f502edb2538c09de#630189538295b2a9cd57ace4f502edb2538c09de"
 dependencies = [
+ "cairo-rs",
  "cocoa 0.24.0",
  "core-graphics 0.22.2",
  "gdk",
@@ -2220,8 +2267,10 @@ dependencies = [
  "glib",
  "gtk",
  "image",
+ "infer",
  "libc",
  "objc",
+ "objc_id",
  "once_cell",
  "serde",
  "serde_json",
