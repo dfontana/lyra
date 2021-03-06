@@ -1119,6 +1119,8 @@ dependencies = [
  "daemonize",
  "include_dir",
  "keys",
+ "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "wry",
@@ -1718,9 +1720,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.63"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43535db9747a4ba938c0ce0a98cc631a46ebf943c9e1d604e091df6007620bf6"
+checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
 dependencies = [
  "itoa",
  "ryu",
@@ -2256,7 +2258,7 @@ dependencies = [
 [[package]]
 name = "wry"
 version = "0.5.1"
-source = "git+https://github.com/tauri-apps/wry?rev=630189538295b2a9cd57ace4f502edb2538c09de#630189538295b2a9cd57ace4f502edb2538c09de"
+source = "git+https://github.com/tauri-apps/wry?rev=729fdc182eaf4af44d822dfc9396deb3f5f5810a#729fdc182eaf4af44d822dfc9396deb3f5f5810a"
 dependencies = [
  "cairo-rs",
  "cocoa 0.24.0",

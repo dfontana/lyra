@@ -14,6 +14,7 @@ export default {
     {
       file: '../dist/index.js',
       format: 'iife',
+      sourcemap: 'inline',
       plugins: [terser()]
     }
   ],

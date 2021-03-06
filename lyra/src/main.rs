@@ -9,11 +9,18 @@ mod protocol;
 
 use clap::{App, Arg};
 use keys::{Key, Keyset, Listener};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fs::File;
 use tokio::{sync::broadcast, task};
-use wry::{Application, Attributes};
+use wry::{Application, Attributes, RpcRequest, RpcResponse, WindowProxy};
 
 use daemonize::Daemonize;
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Params {
+  msg: String,
+}
 
 #[tokio::main]
 async fn main() {
@@ -72,8 +79,40 @@ async fn run() {
     skip_taskbar: true,
     ..Default::default()
   };
+  let handler = Box::new(
+    |_proxy: WindowProxy, mut req: RpcRequest| match req.method.as_ref() {
+      "ping" => Some(RpcResponse::new_result(
+        req.id.take(),
+        Some(Value::String("pong".to_string())),
+      )),
+      "break" => Some(RpcResponse::new_error(
+        req.id.take(),
+        Some(Value::String("Failed".to_string())),
+      )),
+      "data" => {
+        let param = req
+          .params
+          .take()
+          .ok_or("Missing Args")
+          .and_then(|v| serde_json::from_value::<Vec<Params>>(v).or(Err("Failed to parse Args")))
+          .and_then(|mut args| {
+            if args.len() == 0 {
+              Err("Missing Args")
+            } else {
+              Ok(args.swap_remove(0))
+            }
+          });
+        let res = match param {
+          Ok(val) => RpcResponse::new_result(req.id.take(), Some(Value::String(val.msg))),
+          Err(err) => RpcResponse::new_error(req.id.take(), Some(Value::String(err.to_string()))),
+        };
+        Some(res)
+      }
+      _ => None,
+    },
+  );
   let window1 = app
-    .add_window_with_configs(attributes, None, Some(prot))
+    .add_window_with_configs(attributes, Some(handler), Some(prot))
     .expect("It failed");
 
   let (tx, mut rx) = broadcast::channel(16);

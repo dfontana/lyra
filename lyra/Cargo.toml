@@ -9,6 +9,8 @@ clap = "2.33.3"
 daemonize = "0.4.1"
 include_dir = "0.6.0"
 keys = { path = "../keys" }
+serde = "1.0.123"
+serde_json = "1.0.64"
 thiserror = "1.0.24"
 tokio = { version = "1.2.0", features = ["full"] }
-wry = {git = "https://github.com/tauri-apps/wry", rev = "630189538295b2a9cd57ace4f502edb2538c09de"}
+wry = {git = "https://github.com/tauri-apps/wry", rev = "729fdc182eaf4af44d822dfc9396deb3f5f5810a"}
