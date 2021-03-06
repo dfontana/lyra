@@ -8,7 +8,7 @@ WIP
 - [ ] Implement UI
   - [ ] Event bus between JS & Rust
     - [x] Basic implementation
-    - [ ] Handling delgated better
+    - [x] Handling delgated better
     - [ ] Async support
   - [ ] Input Box
   - [ ] Result List
