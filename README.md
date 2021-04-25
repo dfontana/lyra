@@ -40,6 +40,18 @@ WIP - a cross-platform Spotlight/Alfred look-a-like.
 - [ ] App Launching needs to know where to find programs
 - [ ] Build & test
 
+## MVP 4: Configuration Window
+
+- [ ] Specialize Configuration command to alter the config file
+  - [ ] Window Size
+  - [ ] Window Location
+  - [ ] Paths for file search
+  - [ ] Paths/Extensions for application search
+  - [ ] Command to run when opening file
+  - [ ] Command to run when opening application
+  - [ ] Key Commands to open/hide
+  - [ ] Key Commands to select up/down?
+
 ## Stretch
 
 - Linux support
@@ -47,12 +59,7 @@ WIP - a cross-platform Spotlight/Alfred look-a-like.
 - UI Touchups
   - [ ] Styling (Text, Background)
   - [ ] Animations
-- [ ] Configuration
-  - [ ] Window Size
-  - [ ] Window Location
-  - [ ] Key Commands to open/hide
-  - [ ] Key Commands to select up/down
-  - [ ] Styles
+  - [ ] Configurable style sheets
 - [ ] Module System
   - [ ] Load modules from binary?
   - [ ] Refactor existing systems into modules
