@@ -39,8 +39,10 @@ function App(props) {
 
   return (
     <>
+      <div className={css.searchRoot}>
+        <input type="text" autofocus autoCorrect="off" className={css.searchInput} />
+      </div>
       <button onClick={onClick}>Send RPC</button>
-      <div className={css.app}>{value}</div>
     </>
   );
 }
