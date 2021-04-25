@@ -1,49 +1,75 @@
-import React, { useEffect, useState } from 'react';
-import { test } from './events/event';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import SearchResult from './searchResult';
+import useKeyPress from './useKeyPress';
 import css from './app.css';
 
+const CALL = 'call';
 const EVENTS = {
-  0: 'ping',
-  1: 'break',
-  2: 'data',
-};
-const EVENT_ARGS = {
-  0: null,
-  1: null,
-  2: { msg: 'hello' },
+  SUBMIT: 'Submit',
+  SEARCH: 'Search',
 };
 
 function App(props) {
-  const [value, setValue] = useState('Nil');
-  const [inc, setInc] = useState(0);
+  const searchRef = useRef();
+  const [search, setSearch] = useState('');
+  const [selection, setSelected] = useState(0);
+  const [results, setResults] = useState([]);
+
+  const isArrowDown = useKeyPress('ArrowDown', searchRef);
+  const isArrowUp = useKeyPress('ArrowUp', searchRef);
+  const isEnter = useKeyPress('Enter', searchRef);
 
   useEffect(() => {
-    if (inc >= 3) {
-      setInc(0);
+    if (isArrowDown && selection < results.length - 1) {
+      setSelected(selection + 1);
     }
-  }, [inc]);
+  }, [isArrowDown, selection, setSelected]);
 
-  const onClick = () => {
-    rpc
-      .call(EVENTS[inc], EVENT_ARGS[inc])
-      .then((r) => {
-        console.log(r);
-        setInc(inc + 1);
-        setValue(r);
-      })
-      .catch((e) => {
-        console.log(e);
-        setInc(inc + 1);
-      });
+  useEffect(() => {
+    if (isArrowUp && selection > 0) {
+      setSelected(selection - 1);
+    }
+  }, [isArrowUp, selection, setSelected]);
+
+  useEffect(() => {
+    if (isEnter) {
+      rpc.call(CALL, { type: EVENTS.SUBMIT, value: selection }).catch(console.error);
+    }
+  }, [isEnter, selection]);
+
+  const onKeyPress = ({ key }) => {
+    switch (key) {
+      case 'Enter':
+      case 'ArrowDown':
+      case 'ArrowUp':
+        return;
+      default:
+        setSelected(0);
+        rpc
+          .call(CALL, { type: EVENTS.SEARCH, value: search })
+          .then(setResults)
+          .catch(console.error);
+    }
   };
 
+  const onChange = useCallback((event) => setSearch(event.target.value), [setSearch]);
+
   return (
-    <>
-      <div className={css.searchRoot}>
-        <input type="text" autofocus autoCorrect="off" className={css.searchInput} />
-      </div>
-      <button onClick={onClick}>Send RPC</button>
-    </>
+    <div className={css.searchRoot}>
+      <input
+        ref={searchRef}
+        type="text"
+        autofocus
+        autoCorrect="off"
+        className={css.searchInput}
+        onKeyPress={onKeyPress}
+        onChange={onChange}
+        value={search}
+      />
+      {results.map(({ id, value }) => (
+        <SearchResult key={id} id={id} value={value} selected={id == selection} />
+      ))}
+    </div>
   );
 }
 
