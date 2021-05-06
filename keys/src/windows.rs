@@ -1,12 +1,11 @@
 use crate::traits::{Action, Callback, Event, Key, Keyset, ListenError};
-use std::ptr::null_mut;
+use std::{convert::TryInto, ptr::null_mut, sync::Mutex};
 use winapi::shared::minwindef::{LPARAM, LRESULT, WPARAM};
 use winapi::shared::windef::HHOOK;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::winuser::{
-    SetWindowsHookExA, KBDLLHOOKSTRUCT,
-    WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP,HC_ACTION,WH_KEYBOARD_LL,
+  CallNextHookEx, GetMessageA, SetWindowsHookExA, HC_ACTION, KBDLLHOOKSTRUCT, WH_KEYBOARD_LL,
+  WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 pub static mut HOOK: HHOOK = null_mut();
@@ -25,8 +24,8 @@ where
     }
     let hook = SetWindowsHookExA(WH_KEYBOARD_LL, Some(raw_callback), null_mut(), 0);
     if hook.is_null() {
-        let error = GetLastError();
-        return Err(ListenerError::HookError(error));
+      let error = GetLastError();
+      return Err(ListenError::HookError(error));
     }
     HOOK = hook;
     GetMessageA(null_mut(), null_mut(), 0, 0);
@@ -37,13 +36,15 @@ where
 unsafe extern "system" fn raw_callback(code: i32, param: WPARAM, lpdata: LPARAM) -> LRESULT {
   if code == HC_ACTION {
     let event = match param.try_into() {
-        Ok(WM_KEYDOWN) | Ok(WM_SYSKEYDOWN) => {
-            Some(Event::new(get_key(lpdata), Action::KeyPress))
-        }
-        Ok(WM_KEYUP) | Ok(WM_SYSKEYUP) => {
-            Some(Event::new(get_key(lpdata), Action::KeyRelease))
-        }
-        _ => None,
+      Ok(WM_KEYDOWN) | Ok(WM_SYSKEYDOWN) => Some(Event::new(
+        Keyset::new(get_key(lpdata), Vec::new()),
+        Action::KeyPress,
+      )),
+      Ok(WM_KEYUP) | Ok(WM_SYSKEYUP) => Some(Event::new(
+        Keyset::new(get_key(lpdata), Vec::new()),
+        Action::KeyRelease,
+      )),
+      _ => None,
     };
     if let Some(e) = event {
       let cb = GLOBAL_CALLBACK.lock().unwrap();
