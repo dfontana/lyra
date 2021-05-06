@@ -1,19 +1,12 @@
 use crate::traits::{Action, Callback, Event, Key, Keyset, ListenError};
 use std::ptr::null_mut;
-
-mod bindings {
-  windows::include_bindings!();
-}
-
-use bindings::{
-  Windows::Win32::WindowsAndMessaging::{
-    CallNextHookEx, 
-    GetMessageA, 
-    SetWindowsHookExA, LPARAM, WPARAM, HC_ACTION, HHOOK,KBDLLHOOKSTRUCT,WM_SYSKEYDOWN,WM_KEYDOWN,WM_KEYUP,WM_SYSKEYUP,
-    WINDOWS_HOOK_ID::WH_KEYBOARD_LL
-  },
-  Windows::Win32::SystemServices::LRESULT,
-  Windows::Win32::Debug::GetLastError,
+use winapi::shared::minwindef::{LPARAM, LRESULT, WPARAM};
+use winapi::shared::windef::HHOOK;
+use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::winuser::{
+    SetWindowsHookExA, KBDLLHOOKSTRUCT,
+    WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN,
+    WM_SYSKEYUP,HC_ACTION,WH_KEYBOARD_LL,
 };
 
 pub static mut HOOK: HHOOK = null_mut();
