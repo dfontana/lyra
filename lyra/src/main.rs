@@ -1,5 +1,4 @@
 extern crate clap;
-extern crate daemonize;
 #[macro_use]
 extern crate include_dir;
 extern crate tokio;
@@ -9,47 +8,42 @@ mod event;
 mod hotkeys;
 mod window;
 
-use clap::{App, Arg};
-use std::fs::File;
+use clap::App;
+use event::Event as UserEvent;
 
-use daemonize::Daemonize;
+use wry::application::{
+  event::{Event, StartCause, WindowEvent},
+  event_loop::ControlFlow,
+};
 
 #[tokio::main]
 async fn main() {
-  let matches = App::new("Lyra")
-    .arg(
-      Arg::with_name("foreground")
-        .short("f")
-        .help("Run Lyra in the foreground rather than as a daemon"),
-    )
-    .get_matches();
+  let _matches = App::new("Lyra").get_matches();
 
-  if matches.is_present("foreground") {
-    println!("Launching foreground...");
-    run().await;
-    return;
-  }
+  let (evloop, webview) = window::configure().expect("Window Setup Failed");
 
-  println!("Starting Daemon...");
-  let stdout = File::create("/tmp/daemon.out").unwrap();
-  let stderr = File::create("/tmp/daemon.err").unwrap();
+  hotkeys::launch(evloop.create_proxy());
 
-  let daemonize = Daemonize::new()
-    .pid_file("/tmp/daemon.pid")
-    .stdout(stdout)
-    .stderr(stderr)
-    .exit_action(|| println!("Executed before master process exits"));
+  evloop.run(move |event, _, control_flow| {
+    *control_flow = ControlFlow::Wait;
 
-  match daemonize.start() {
-    Ok(_) => {
-      run().await;
+    match event {
+      Event::NewEvents(StartCause::Init) => println!("Wry has started!"),
+      Event::UserEvent(ev) => match ev {
+        UserEvent::Show => {
+          webview.window().set_visible(true);
+          webview.window().set_focus();
+        }
+        UserEvent::Hide => {
+          webview.window().set_visible(false);
+        }
+        _ => (),
+      },
+      Event::WindowEvent {
+        event: WindowEvent::CloseRequested,
+        ..
+      } => *control_flow = ControlFlow::Exit,
+      _ => (),
     }
-    Err(e) => eprintln!("Error, {}", e),
-  }
-}
-
-async fn run() {
-  let (app, win) = window::configure().expect("Window Setup Failed");
-  hotkeys::launch(win);
-  app.run();
+  });
 }
