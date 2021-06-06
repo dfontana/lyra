@@ -14,6 +14,7 @@ use event::Event as UserEvent;
 use wry::application::{
   event::{Event, StartCause, WindowEvent},
   event_loop::ControlFlow,
+  menu::MenuType,
 };
 
 #[tokio::main]
@@ -43,8 +44,17 @@ async fn main() {
         }
         _ => (),
       },
-      Event::WindowEvent {event: WindowEvent::Focused(false), ..} => {
+      Event::WindowEvent {
+        event: WindowEvent::Focused(false),
+        ..
+      } => {
         webview.window().set_visible(false);
+      }
+      Event::MenuEvent {
+        origin: MenuType::SystemTray,
+        ..
+      } => {
+        // TODO can do something
       }
       Event::WindowEvent {
         event: WindowEvent::CloseRequested,
