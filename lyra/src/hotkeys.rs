@@ -1,12 +1,14 @@
+use crate::event::Event;
 use keys::{Key, Keyset, Listener};
 use tokio::{sync::broadcast, task};
-use wry::WindowProxy;
+use wry::application::event_loop::EventLoopProxy;
 
-pub fn launch(proxy: WindowProxy) {
+pub fn launch(proxy: EventLoopProxy<Event>) {
   let (tx, mut rx) = broadcast::channel(16);
   task::spawn(async move {
     println!("[send] Launching listener");
     Listener::new()
+      // TODO: Register ESC (for closing the window)
       .add_up(Keyset::new(Key::Space, vec![Key::MetaLeft]))
       .listen(move |e: Keyset| {
         let sender = tx.clone();
@@ -29,10 +31,15 @@ pub fn launch(proxy: WindowProxy) {
         Err(e) => println!("[recv] Failed {:?}", e),
         Ok(v) => {
           println!("[recv] {}", v);
+          // TODO match on v (keyset) to determine action to take. Should probably store these globally.
           if !is_visible {
-            proxy.show().expect("Failed to Show window");
+            proxy
+              .send_event(Event::Show)
+              .expect("Failed to Show window");
           } else {
-            proxy.hide().expect("Failed to Hide window");
+            proxy
+              .send_event(Event::Hide)
+              .expect("Failed to Hide window");
           }
           is_visible = !is_visible;
         }

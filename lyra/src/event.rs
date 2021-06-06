@@ -1,16 +1,21 @@
 use crate::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use wry::{RpcRequest, RpcResponse, WindowProxy};
+use wry::{
+  application::{dpi::LogicalSize, window::Window},
+  webview::{RpcRequest, RpcResponse},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
-enum Event {
+pub enum Event {
+  Show,
+  Hide,
   Search { value: String },
   Submit { value: usize },
 }
 
-pub fn handler(_proxy: WindowProxy, mut req: RpcRequest) -> Option<RpcResponse> {
+pub fn handler(_proxy: &Window, mut req: RpcRequest) -> Option<RpcResponse> {
   let event = match Event::from(req.params.take()) {
     Ok(e) => e,
     Err(err) => {
@@ -21,10 +26,9 @@ pub fn handler(_proxy: WindowProxy, mut req: RpcRequest) -> Option<RpcResponse> 
     }
   };
 
-  match _proxy.set_height(38f64 + (18f64 * 2f64)) {
-    Ok(_) => (),
-    Err(e) => println!("{}", e),
-  };
+  let size = _proxy.inner_size();
+  let new_size = LogicalSize::new(size.width, 38u32 + (18u32 * 2u32));
+  _proxy.set_inner_size(new_size);
 
   match event {
     Event::Search { value } => Some(RpcResponse::new_result(
