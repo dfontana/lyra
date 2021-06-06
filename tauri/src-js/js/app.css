@@ -1,0 +1,34 @@
+.searchRoot {
+  width: 100%;
+  height: 100%;
+  overflow-y: hidden;
+  overflow-x: scroll;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.searchInput {
+  color: #54e6ae;
+  width: 100%;
+  height: 38px;
+  font-size: 16px;
+  font-style: normal;
+  font-family: "Courier New", Courier, monospace;
+  padding: 0px;
+  border: 0px;
+}
+
+.searchResult {
+  color: #54e6ae;
+  background-color: aliceblue;
+  height: 18px;
+  font-size: 16px;
+  font-style: normal;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.selected {
+  background-color: #54e6ae;
+  color: aliceblue;
+}
