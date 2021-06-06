@@ -27,6 +27,9 @@ async fn main() {
   evloop.run(move |event, _, control_flow| {
     *control_flow = ControlFlow::Wait;
 
+    // TODO: Tao can support hotkeys via this loop, but it doesn't appear to be
+    //       working at the device level just yet. They are working on integrating
+    //       as of writing; but for now can manually use tauri-hotkey
     match event {
       Event::NewEvents(StartCause::Init) => println!("Wry has started!"),
       Event::UserEvent(ev) => match ev {
@@ -39,6 +42,9 @@ async fn main() {
         }
         _ => (),
       },
+      Event::WindowEvent {event: WindowEvent::Focused(false), ..} => {
+        webview.window().set_visible(false);
+      }
       Event::WindowEvent {
         event: WindowEvent::CloseRequested,
         ..
