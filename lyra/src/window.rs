@@ -31,6 +31,8 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
     .with_inner_size(LogicalSize::new(bar_w, bar_h))
     .build(&evloop)?;
 
+  window.set_visible(false);
+
   let _webview = WebViewBuilder::new(window)?
     .with_transparent(true)
     .with_rpc_handler(handler)
@@ -51,20 +53,26 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
     .with_url("lyra://index.html")?
     .build()?;
 
-  // TODO Linux requires a pathbuf apparently, but that doesn't jive with our getup. Will need a fix
   #[cfg(target_os = "windows")]
-  let icon_path = "static/system_tray.ico";
-  #[cfg(target_os = "macos")]
-  let icon_path = "static/system_tray.png";
-
-  let icon = BUNDLE_DIR
-    .get_file(icon_path)
+  let icon_data = BUNDLE_DIR
+    .get_file("static/system_tray.ico")
     .map(|f| f.contents().to_vec())
-    .ok_or(Error::ResourceNotFound(icon_path.into()))
-    .map_err(|e| {
-      eprintln!("Failed to pull resource: {:?}", e);
-      wry::Error::InitScriptError 
-    })?;
+    .ok_or(Error::ResourceNotFound("static/system_tray.ico".into()));
+  #[cfg(target_os = "macos")]
+  let icon_data = BUNDLE_DIR
+    .get_file("static/system_tray.png")
+    .map(|f| f.contents().to_vec())
+    .ok_or(Error::ResourceNotFound("static/system_tray.png".into()));
+  #[cfg(target_os = "linux")]
+  let icon_data = BUNDLE_DIR
+    .get_file("static/system_tray.png")
+    .map(|f| f.path().to_path_buf())
+    .ok_or(Error::ResourceNotFound("static/system_tray.png".into()));
+
+  let icon = icon_data.map_err(|e| {
+    eprintln!("Failed to pull resource: {:?}", e);
+    wry::Error::InitScriptError
+  })?;
   let open_new_window = MenuItem::new("Lyra");
   let _system_tray = SystemTrayBuilder::new(icon, vec![open_new_window]).build(&evloop)?;
 
