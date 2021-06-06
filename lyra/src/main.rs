@@ -30,6 +30,7 @@ async fn main() {
     // TODO: Tao can support hotkeys via this loop, but it doesn't appear to be
     //       working at the device level just yet. They are working on integrating
     //       as of writing; but for now can manually use tauri-hotkey
+    //       https://github.com/tauri-apps/tao/issues/33
     match event {
       Event::NewEvents(StartCause::Init) => println!("Wry has started!"),
       Event::UserEvent(ev) => match ev {
