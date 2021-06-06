@@ -54,7 +54,9 @@ async fn main() {
         origin: MenuType::SystemTray,
         ..
       } => {
-        // TODO can do something
+        // TODO can do something; but you'll need the menu_id generated from the MenuItem
+        //      to operate on specific options within the Tray. Perhaps pass a lookup from
+        //      from the window creation process
       }
       Event::WindowEvent {
         event: WindowEvent::CloseRequested,
