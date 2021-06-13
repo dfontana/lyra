@@ -1,10 +1,18 @@
-[workspace]
+[package]
+name = "lyra"
+version = "0.1.1"
+authors = ["dfontana <dyfontana@gmail.com>"]
+edition = "2018"
 
-members = [
-  "lyra",
-  "keys",
-]
-
+[dependencies]
+clap = "2.33.3"
+include_dir = "0.6.0"
+serde = "1.0.123"
+serde_json = "1.0.64"
+thiserror = "1.0.24"
+tokio = { version = "1.2.0", features = ["full"] }
+tao = { git = "https://github.com/tauri-apps/tao", rev = "d1065e3d9e4f0f48b366ce9736a57b5866c003db" }
+wry = {git = "https://github.com/tauri-apps/wry", rev = "c56b6b026b4f56959a814c5363a5b624b52da6d6"}
 
 [patch.crates-io]
 tao = { git = "https://github.com/tauri-apps/tao", rev = "d1065e3d9e4f0f48b366ce9736a57b5866c003db" }

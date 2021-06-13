@@ -2,16 +2,13 @@ use crate::error::Error;
 use crate::event::{handler, Event};
 use include_dir::Dir;
 #[cfg(target_os = "macos")]
-use wry::application::platform::macos::{
-  ActivationPolicy, EventLoopExtMacOS,
-};
+use wry::application::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
 #[cfg(target_os = "windows")]
 use wry::application::platform::windows::SystemTrayExtWindows;
 use wry::{
   application::{
     dpi::{LogicalPosition, LogicalSize},
     event_loop::EventLoop,
-    platform::global_shortcut::ShortcutManager,
     system_tray::SystemTrayBuilder,
     window::WindowBuilder,
   },

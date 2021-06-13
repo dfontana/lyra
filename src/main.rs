@@ -5,16 +5,19 @@ extern crate tokio;
 
 mod error;
 mod event;
-mod hotkeys;
 mod window;
 
 use clap::App;
-use event::Event as UserEvent;
 
-use tao::event::TrayEvent;
+use tao::{
+  accelerator::{Accelerator, SysMods},
+  event::TrayEvent,
+  keyboard::KeyCode,
+};
 use wry::application::{
   event::{Event, StartCause, WindowEvent},
   event_loop::ControlFlow,
+  platform::global_shortcut::ShortcutManager,
 };
 
 #[tokio::main]
@@ -23,44 +26,44 @@ async fn main() {
 
   let (evloop, webview) = window::configure().expect("Window Setup Failed");
 
-  hotkeys::launch(evloop.create_proxy());
+  let mut hotkeys = ShortcutManager::new(&evloop);
+  let toggleopenkey = Accelerator::new(SysMods::Cmd, KeyCode::Space);
+  hotkeys.register(toggleopenkey.clone()).unwrap();
 
   evloop.run(move |event, _, control_flow| {
     *control_flow = ControlFlow::Wait;
 
-    // TODO: Tao can support hotkeys via this loop, but it doesn't appear to be
-    //       working at the device level just yet. They are working on integrating
-    //       as of writing; but for now can manually use tauri-hotkey
-    //       https://github.com/tauri-apps/tao/issues/33
+    let mut is_visible = false;
+
+    // Event::UserEvent could be used if evloop.create_proxy() is used to submit an event
     match event {
       Event::NewEvents(StartCause::Init) => println!("Wry has started!"),
-      Event::UserEvent(ev) => match ev {
-        UserEvent::Show => {
-          webview.window().set_visible(true);
-          webview.window().set_focus();
-        }
-        UserEvent::Hide => {
-          webview.window().set_visible(false);
-        }
-        _ => (),
-      },
       Event::WindowEvent {
         event: WindowEvent::Focused(false),
         ..
       } => {
         webview.window().set_visible(false);
-      },
+      }
       Event::TrayEvent {
         event: TrayEvent::LeftClick,
         ..
       } => {
         webview.window().set_visible(true);
         webview.window().set_focus();
-      },
+      }
       Event::WindowEvent {
         event: WindowEvent::CloseRequested,
         ..
       } => *control_flow = ControlFlow::Exit,
+      Event::GlobalShortcutEvent(hotkey_id) if hotkey_id == toggleopenkey.clone().id() => {
+        if !is_visible {
+          webview.window().set_visible(true);
+          webview.window().set_focus();
+        } else {
+          webview.window().set_visible(false);
+        }
+        is_visible = !is_visible;
+      }
       _ => (),
     }
   });
