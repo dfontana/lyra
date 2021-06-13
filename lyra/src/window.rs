@@ -6,7 +6,7 @@ use wry::{
     dpi::{LogicalPosition, LogicalSize},
     event_loop::EventLoop,
     menu::MenuItem,
-    platform::system_tray::SystemTrayBuilder,
+    system_tray::SystemTrayBuilder,
     window::WindowBuilder,
   },
   webview::{WebView, WebViewBuilder},
@@ -51,7 +51,7 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
         })
     })
     .with_url("lyra://index.html")?
-    .build()?;
+    .build(&Default::default())?;
 
   #[cfg(target_os = "windows")]
   let icon_data = BUNDLE_DIR
@@ -73,8 +73,7 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
     eprintln!("Failed to pull resource: {:?}", e);
     wry::Error::InitScriptError
   })?;
-  let open_new_window = MenuItem::new("Lyra");
-  let _system_tray = SystemTrayBuilder::new(icon, vec![open_new_window]).build(&evloop)?;
+  let _system_tray = SystemTrayBuilder::new(icon, None).build(&evloop)?;
 
   Ok((evloop, _webview))
 }

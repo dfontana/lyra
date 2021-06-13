@@ -12,4 +12,4 @@ serde = "1.0.123"
 serde_json = "1.0.64"
 thiserror = "1.0.24"
 tokio = { version = "1.2.0", features = ["full"] }
-wry = {git = "https://github.com/tauri-apps/wry", rev = "81f3218d9ac55a987b050f574774afcaa0b5c2f7"}
+wry = {git = "https://github.com/tauri-apps/wry", rev = "761b2b59fe0434b3458d99ed599394af0e1e3962"}

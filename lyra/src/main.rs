@@ -14,7 +14,6 @@ use event::Event as UserEvent;
 use wry::application::{
   event::{Event, StartCause, WindowEvent},
   event_loop::ControlFlow,
-  menu::MenuType,
 };
 
 #[tokio::main]
@@ -49,14 +48,6 @@ async fn main() {
         ..
       } => {
         webview.window().set_visible(false);
-      }
-      Event::MenuEvent {
-        origin: MenuType::SystemTray,
-        ..
-      } => {
-        // TODO can do something; but you'll need the menu_id generated from the MenuItem
-        //      to operate on specific options within the Tray. Perhaps pass a lookup from
-        //      from the window creation process
       }
       Event::WindowEvent {
         event: WindowEvent::CloseRequested,
