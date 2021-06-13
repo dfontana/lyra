@@ -3,13 +3,11 @@ use crate::event::{handler, Event};
 use include_dir::Dir;
 #[cfg(target_os = "macos")]
 use wry::application::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
-#[cfg(target_os = "windows")]
-use wry::application::platform::windows::SystemTrayExtWindows;
 use wry::{
   application::{
     dpi::{LogicalPosition, LogicalSize},
     event_loop::EventLoop,
-    system_tray::SystemTrayBuilder,
+    system_tray::{SystemTrayBuilder, SystemTray},
     window::WindowBuilder,
   },
   webview::{WebView, WebViewBuilder},
@@ -17,7 +15,7 @@ use wry::{
 
 static BUNDLE_DIR: Dir = include_dir!("dist");
 
-pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
+pub fn configure() -> Result<(EventLoop<Event>, SystemTray, WebView), wry::Error> {
   let y_offset = 25f64;
   let (disp_w, _) = (1280f64, 800f64);
   let (bar_w, bar_h) = ((disp_w * 0.9f64).floor(), 32f64);
@@ -85,5 +83,5 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
   })?;
   let _system_tray = SystemTrayBuilder::new(icon, None).build(&evloop)?;
 
-  Ok((evloop, _webview))
+  Ok((evloop, _system_tray, _webview))
 }
