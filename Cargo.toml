@@ -4,3 +4,7 @@ members = [
   "lyra",
   "keys",
 ]
+
+
+[patch.crates-io]
+tao = { git = "https://github.com/tauri-apps/tao", rev = "d1065e3d9e4f0f48b366ce9736a57b5866c003db" }

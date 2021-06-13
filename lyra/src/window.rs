@@ -1,12 +1,18 @@
 use crate::error::Error;
 use crate::event::{handler, Event};
 use include_dir::Dir;
+#[cfg(target_os = "macos")]
+use wry::application::platform::macos::{
+  ActivationPolicy, EventLoopExtMacOS,
+};
+#[cfg(target_os = "windows")]
+use wry::application::platform::windows::SystemTrayExtWindows;
 use wry::{
   application::{
     dpi::{LogicalPosition, LogicalSize},
     event_loop::EventLoop,
-    menu::MenuItem,
-    platform::system_tray::SystemTrayBuilder,
+    platform::global_shortcut::ShortcutManager,
+    system_tray::SystemTrayBuilder,
     window::WindowBuilder,
   },
   webview::{WebView, WebViewBuilder},
@@ -20,8 +26,15 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
   let (bar_w, bar_h) = ((disp_w * 0.9f64).floor(), 32f64);
   let (bar_x, bar_y) = (((disp_w - bar_w) / 2f64).floor(), y_offset);
 
-  let evloop: EventLoop<Event> = EventLoop::with_user_event();
+  let mut evloop: EventLoop<Event> = EventLoop::with_user_event();
+
+  // launch macos app without menu and without dock icon
+  // shouold be set at launch
+  #[cfg(target_os = "macos")]
+  evloop.set_activation_policy(ActivationPolicy::Accessory);
+
   let window = WindowBuilder::new()
+    .with_skip_taskbar(true)
     .with_always_on_top(true)
     .with_decorations(false)
     .with_resizable(false)
@@ -51,7 +64,7 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
         })
     })
     .with_url("lyra://index.html")?
-    .build()?;
+    .build(&Default::default())?;
 
   #[cfg(target_os = "windows")]
   let icon_data = BUNDLE_DIR
@@ -73,8 +86,7 @@ pub fn configure() -> Result<(EventLoop<Event>, WebView), wry::Error> {
     eprintln!("Failed to pull resource: {:?}", e);
     wry::Error::InitScriptError
   })?;
-  let open_new_window = MenuItem::new("Lyra");
-  let _system_tray = SystemTrayBuilder::new(icon, vec![open_new_window]).build(&evloop)?;
+  let _system_tray = SystemTrayBuilder::new(icon, None).build(&evloop)?;
 
   Ok((evloop, _webview))
 }
