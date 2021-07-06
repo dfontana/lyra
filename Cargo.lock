@@ -104,12 +104,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 
 [[package]]
-name = "byteorder"
-version = "1.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
-
-[[package]]
 name = "bytes"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -154,16 +148,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fce5b5fb86b0c57c20c834c1b412fd09c77c8a59b9473f86272709e78874cd1d"
 dependencies = [
  "nom",
-]
-
-[[package]]
-name = "cfb"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca453e8624711b2f0f4eb47076a318feda166252a827ee25d067b43de83dcba0"
-dependencies = [
- "byteorder",
- "uuid",
 ]
 
 [[package]]
@@ -838,15 +822,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "infer"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f92b41dab759f9e8427c03f519c344a14655490b8db548dac1e57a75b3258391"
-dependencies = [
- "cfb",
-]
-
-[[package]]
 name = "instant"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1030,12 +1005,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nameof"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba896fb4d7fe86433ebaf18c532bd9202e54c450a1bf7723855220e0e76d71d1"
-
-[[package]]
 name = "ndk"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1151,9 +1120,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.7.2"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af8b08b04175473088b46763e51ee54da5f9a164bc162f615b91bc179dbf15a3"
+checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
 
 [[package]]
 name = "pango"
@@ -1514,8 +1483,8 @@ dependencies = [
 
 [[package]]
 name = "tao"
-version = "0.2.6"
-source = "git+https://github.com/tauri-apps/tao?rev=d1065e3d9e4f0f48b366ce9736a57b5866c003db#d1065e3d9e4f0f48b366ce9736a57b5866c003db"
+version = "0.3.1"
+source = "git+https://github.com/tauri-apps/tao?rev=308411caeacc3b7c701d8d857964248a3411dfaa#308411caeacc3b7c701d8d857964248a3411dfaa"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -1537,7 +1506,6 @@ dependencies = [
  "libappindicator",
  "libc",
  "log",
- "nameof",
  "ndk",
  "ndk-glue",
  "ndk-sys",
@@ -1607,9 +1575,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.6.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a38d31d7831c6ed7aad00aa4c12d9375fd225a6dd77da1d25b707346319a975"
+checksum = "570c2eb13b3ab38208130eccd41be92520388791207fde783bda7c1e8ace28d4"
 dependencies = [
  "autocfg",
  "bytes",
@@ -1665,9 +1633,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-segmentation"
-version = "1.7.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb0d2e7be6ae3a5fa87eed5fb451aff96f2573d2694942e40543ae0bbe19c796"
+checksum = "8895849a949e7845e06bd6dc1aa51731a103c42707010a5b591c0038fb73385b"
 
 [[package]]
 name = "unicode-width"
@@ -1692,12 +1660,6 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
-
-[[package]]
-name = "uuid"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 
 [[package]]
 name = "vec_map"
@@ -1838,8 +1800,8 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "wry"
-version = "0.9.4"
-source = "git+https://github.com/tauri-apps/wry?rev=761b2b59fe0434b3458d99ed599394af0e1e3962#761b2b59fe0434b3458d99ed599394af0e1e3962"
+version = "0.10.3"
+source = "git+https://github.com/tauri-apps/wry?rev=3e8585a394fd4d08633f46f34fde5dbb40b72e5e#3e8585a394fd4d08633f46f34fde5dbb40b72e5e"
 dependencies = [
  "cocoa",
  "core-graphics 0.22.2",
@@ -1847,7 +1809,6 @@ dependencies = [
  "gio",
  "glib",
  "gtk",
- "infer",
  "libc",
  "log",
  "objc",

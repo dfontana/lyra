@@ -26,7 +26,7 @@ use wry::application::{
 #[cfg(target_os = "windows")]
 use wry::application::platform::windows::SystemTrayExtWindows;
 
-lazy_static!{
+lazy_static! {
   static ref IS_VISIBLE: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
 }
 
@@ -67,6 +67,7 @@ async fn main() {
       Event::GlobalShortcutEvent(hotkey_id) if hotkey_id == toggleopenkey.clone().id() => {
         let mut vis = IS_VISIBLE.lock().unwrap();
         if !*vis {
+          webview.focus();
           webview.window().set_visible(true);
           webview.window().set_focus();
         } else {

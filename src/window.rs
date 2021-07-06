@@ -7,7 +7,7 @@ use wry::{
   application::{
     dpi::{LogicalPosition, LogicalSize},
     event_loop::EventLoop,
-    system_tray::{SystemTrayBuilder, SystemTray},
+    system_tray::{SystemTray, SystemTrayBuilder},
     window::WindowBuilder,
   },
   webview::{WebView, WebViewBuilder},
@@ -29,7 +29,6 @@ pub fn configure() -> Result<(EventLoop<Event>, SystemTray, WebView), wry::Error
   evloop.set_activation_policy(ActivationPolicy::Accessory);
 
   let window = WindowBuilder::new()
-    .with_skip_taskbar(true)
     .with_always_on_top(true)
     .with_decorations(false)
     .with_resizable(false)
@@ -49,9 +48,17 @@ pub fn configure() -> Result<(EventLoop<Event>, SystemTray, WebView), wry::Error
       if path.ends_with('/') {
         path.pop();
       }
+      let mime = match &path {
+        p if p.ends_with(".html") => String::from("text/html"),
+        p if p.ends_with(".js") => String::from("text/javascript"),
+        p if p.ends_with(".png") => String::from("image/png"),
+        p if p.ends_with(".css") => String::from("text/css"),
+        p if p.ends_with(".ico") => String::from("img/ico"),
+        _ => unimplemented!(),
+      };
       BUNDLE_DIR
         .get_file(&path)
-        .map(|f| f.contents().to_vec())
+        .map(|f| (f.contents().to_vec(), mime))
         .ok_or(Error::ResourceNotFound(path))
         .map_err(|e| {
           eprintln!("Failed to pull resource: {:?}", e);
@@ -59,7 +66,7 @@ pub fn configure() -> Result<(EventLoop<Event>, SystemTray, WebView), wry::Error
         })
     })
     .with_url("lyra://index.html")?
-    .build(&Default::default())?;
+    .build()?;
 
   #[cfg(target_os = "windows")]
   let icon_data = BUNDLE_DIR
