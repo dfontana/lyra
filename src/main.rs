@@ -45,13 +45,36 @@ async fn main() {
 
     // Event::UserEvent could be used if evloop.create_proxy() is used to submit an event
     match event {
-      Event::NewEvents(StartCause::Init) => println!("Wry has started!"),
+      Event::RedrawRequested(_) => {
+        if *IS_VISIBLE.lock().unwrap() {
+          // Here's the root of your problem. The window is still reporting as not visible.
+          // This triggers the conditional here: https://github.com/tauri-apps/tao/blob/dev/src/platform_impl/macos/window.rs#L467
+          println!("Redraw: {}", webview.window().is_visible());
+          webview.window().set_focus();
+        }
+      }
       Event::WindowEvent {
         event: WindowEvent::Focused(false),
         ..
       } => {
+        println!("Focus changed {}", false);
         webview.window().set_visible(false);
+        let mut vis = IS_VISIBLE.lock().unwrap();
+        *vis = false;
       }
+      Event::GlobalShortcutEvent(hotkey_id) if hotkey_id == toggleopenkey.clone().id() => {
+        let mut vis = IS_VISIBLE.lock().unwrap();
+        if !*vis {
+          println!("Opening");
+          webview.window().set_visible(true);
+          webview.window().request_redraw();
+        } else {
+          println!("Closing");
+          webview.window().set_visible(false);
+        }
+        *vis = !*vis;
+      }
+      Event::NewEvents(StartCause::Init) => println!("Wry has started!"),
       Event::TrayEvent {
         event: TrayEvent::LeftClick,
         ..
@@ -64,17 +87,6 @@ async fn main() {
         event: WindowEvent::CloseRequested,
         ..
       } => *control_flow = ControlFlow::Exit,
-      Event::GlobalShortcutEvent(hotkey_id) if hotkey_id == toggleopenkey.clone().id() => {
-        let mut vis = IS_VISIBLE.lock().unwrap();
-        if !*vis {
-          webview.focus();
-          webview.window().set_visible(true);
-          webview.window().set_focus();
-        } else {
-          webview.window().set_visible(false);
-        }
-        *vis = !*vis;
-      }
       _ => (),
     }
   });
