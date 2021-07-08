@@ -12,9 +12,8 @@ serde = "1.0.123"
 serde_json = "1.0.64"
 thiserror = "1.0.24"
 tokio = { version = "1.8.0", features = ["full"] }
-tao = { git = "https://github.com/tauri-apps/tao", rev = "308411caeacc3b7c701d8d857964248a3411dfaa"}
-wry = {git = "https://github.com/tauri-apps/wry", rev = "3e8585a394fd4d08633f46f34fde5dbb40b72e5e"}
+wry = "0.10.3"
 
-[patch.crates-io]
-tao = { git = "https://github.com/tauri-apps/tao", rev = "308411caeacc3b7c701d8d857964248a3411dfaa" }
+#[patch.crates-io]
+#tao = { path = "../tao"}
 

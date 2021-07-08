@@ -949,7 +949,6 @@ dependencies = [
  "lazy_static",
  "serde",
  "serde_json",
- "tao",
  "thiserror",
  "tokio",
  "wry",
@@ -1484,7 +1483,8 @@ dependencies = [
 [[package]]
 name = "tao"
 version = "0.3.1"
-source = "git+https://github.com/tauri-apps/tao?rev=308411caeacc3b7c701d8d857964248a3411dfaa#308411caeacc3b7c701d8d857964248a3411dfaa"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecd33dd36dd20ca8a1222c770b13390b04c1a792a7cdf89ee29675d94f172ce5"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -1801,7 +1801,8 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 [[package]]
 name = "wry"
 version = "0.10.3"
-source = "git+https://github.com/tauri-apps/wry?rev=3e8585a394fd4d08633f46f34fde5dbb40b72e5e#3e8585a394fd4d08633f46f34fde5dbb40b72e5e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc08dc42962ffcf98b40a08399ccdfefea8095807d8c6b7d245277c29977f747"
 dependencies = [
  "cocoa",
  "core-graphics 0.22.2",
