@@ -8,7 +8,7 @@ use wry::{
     dpi::{LogicalPosition, LogicalSize},
     event_loop::EventLoop,
     system_tray::{SystemTray, SystemTrayBuilder},
-    window::{Window, WindowBuilder},
+    window::{WindowBuilder},
   },
   webview::{WebView, WebViewBuilder},
 };
