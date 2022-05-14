@@ -1,6 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function useKeyPress(targetKey, ref) {
+  return useInternal(targetKey, ref)[0];
+}
+
+function useKeyPressResetable(targetKey, ref) {
+  return useInternal(targetKey, ref);
+}
+
+export { useKeyPressResetable }
+
+function useInternal(targetKey, ref) {
   const [keyPressed, setKeyPressed] = useState(false);
 
   function downHandler(event) {
@@ -10,12 +20,16 @@ export default function useKeyPress(targetKey, ref) {
     }
   }
 
-  const upHandler = (event) => {
+  function upHandler(event) {
     if (event.key === targetKey) {
       setKeyPressed(false);
       event.preventDefault();
     }
   };
+
+  function reset() {
+    setKeyPressed(false);
+  }
 
   useEffect(() => {
     ref.current.addEventListener('keydown', downHandler);
@@ -27,5 +41,5 @@ export default function useKeyPress(targetKey, ref) {
     };
   }, [upHandler, downHandler]);
 
-  return keyPressed;
+  return [keyPressed, reset];
 }
