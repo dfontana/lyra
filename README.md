@@ -1,4 +1,31 @@
 # Lyra
+### Commands
+
+yarn tauri dev
+
+yarn tauri build
+  - Binary built: `src-tauri/target/release/[app name]`
+  - Installers built: `src-tauri/target/release/bundle/`
+
+### Notes
+
+#### TODO
+
+- Integrate into lyra-parent repo
+- Config file support from `~/.config/lyra`
+- Get icons generated: https://tauri.studio/v1/guides/examples/icons/
+- Optimize app size with:
+  - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
+  - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
+- Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
+
+#### React
+
+- Uses css-modules https://github.com/css-modules/css-modules
+
+#### Tauri
+
+- May need to handle keeping app open on last window gone; if so: https://github.com/tauri-apps/tauri/discussions/2684
 
 WIP - a cross-platform Spotlight/Alfred look-a-like.
 
