@@ -53,21 +53,7 @@
     "updater": {
       "active": false
     },
-    "windows": [
-      {
-        "label": "lyra-main",
-        "alwaysOnTop": true,
-        "center": true,
-        "decorations": false,
-        "focus": false,
-        "visible": false,
-        "fullscreen": false,
-        "resizable": false,
-        "skipTaskbar": true,
-        "height": 100,
-        "width": 800
-      }
-    ],
+    "windows": [],
     "systemTray": {
       "iconPath": "icons/icon.png",
       "iconAsTemplate": true

@@ -1,32 +1,47 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/tauri'
+import { listen } from '@tauri-apps/api/event'
 import SearchResult from './searchResult';
-import useKeyPress from './useKeyPress';
+import useKeyPress, { useKeyPressResetable } from './useKeyPress';
 import './app.css';
 
-const CALL = 'call';
-const EVENTS = {
-  SUBMIT: 'Submit',
-  SEARCH: 'Search',
-};
-
+const { RESET } = window.__LYRA__.events;
+const { SEARCH, SUBMIT, CLOSE } = window.__LYRA__.calls;
+const { INPUT_HEIGHT, OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
 function App() {
-  // TODO onKeyPress for the input.
-  //      Should handle "escape" to close the window too (RPC shutdown)
-  const searchRef = useRef();
   const [search, setSearch] = useState('');
   const [selection, setSelected] = useState(0);
   const [results, setResults] = useState([]);
 
+  const searchRef = useRef();
   const isArrowDown = useKeyPress('ArrowDown', searchRef);
   const isArrowUp = useKeyPress('ArrowUp', searchRef);
   const isEnter = useKeyPress('Enter', searchRef);
+  const [isEscape, resetEscape] = useKeyPressResetable('Escape', searchRef);
+
+  useEffect(() => {
+    let unlisten = null;
+    listen(RESET, () => {
+      setSearch('');
+      setSelected(0);
+      setResults([]);
+    }).then(func => {
+      unlisten = func;
+    });
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    }
+  }, [setSearch, setSelected, setResults]);
+
 
   useEffect(() => {
     if (isArrowDown && selection < results.length - 1) {
       setSelected(selection + 1);
     }
-  }, [isArrowDown, selection, setSelected]);
+  }, [isArrowDown, selection, setSelected, results]);
 
   useEffect(() => {
     if (isArrowUp && selection > 0) {
@@ -36,9 +51,18 @@ function App() {
 
   useEffect(() => {
     if (isEnter) {
-      // rpc.call(CALL, { type: EVENTS.SUBMIT, value: selection }).catch(console.error);
+      invoke(SUBMIT, { selection }).catch(console.error);
     }
   }, [isEnter, selection]);
+
+  useEffect(() => {
+    if (isEscape) {
+      resetEscape();
+      invoke(CLOSE).catch(console.error);
+    }
+  }, [isEscape, resetEscape]);
+
+
   const onKeyPress = ({ key }) => {
     switch (key) {
       case 'Enter':
@@ -46,16 +70,14 @@ function App() {
       case 'ArrowUp':
         return;
       default:
-        setSelected(0);
-      // rpc
-      //   .call(CALL, { type: EVENTS.SEARCH, value: search })
-      //   .then(setResults)
-      //   .catch(console.error);
+        // setSelected(0);
+        invoke(SEARCH, { search })
+          .then(setResults)
+          .catch(console.error);
     }
   };
 
   const onChange = useCallback((event) => setSearch(event.target.value), [setSearch]);
-
 
   return (
     <div className="searchRoot">
@@ -63,14 +85,27 @@ function App() {
         ref={searchRef}
         className="searchInput"
         type="text"
-        autofocus
+        autoFocus
         autoCorrect="off"
         onKeyPress={onKeyPress}
         onChange={onChange}
         value={search}
+        style={{
+          height: `${INPUT_HEIGHT}px`,
+          fontSize: `${FONT_SIZE}px`,
+        }}
       />
       {results.map(({ id, value }) => (
-        <SearchResult key={id} id={id} value={value} selected={id == selection} />
+        <SearchResult
+          key={id}
+          id={id}
+          value={value}
+          selected={id === selection}
+          style={{
+            fontSize: `${FONT_SIZE}px`,
+            height: `${OPTION_HEIGHT}px`
+          }}
+        />
       ))}
     </div>
   );
