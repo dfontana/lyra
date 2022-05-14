@@ -14,7 +14,6 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### TODO
 
-- Config file support from `~/.config/lyra`
 - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
 - Optimize app size with:
   - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
