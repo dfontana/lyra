@@ -40,22 +40,50 @@ impl MainDataBuilder {
   }
 }
 
+#[derive(Default, Builder, Serialize)]
+#[builder(setter(into))]
+pub struct SettingsData {
+  #[builder(setter(each(name = "call", into)))]
+  #[builder(default = "self.default_calls()")]
+  calls: HashMap<String, String>,
+  #[builder(setter(each(name = "event", into)))]
+  #[builder(default)]
+  events: HashMap<String, String>,
+  #[builder(setter(each(name = "style")))]
+  #[builder(default)]
+  styles: HashMap<String, Value>,
+}
+
+impl SettingsData {
+  pub fn builder() -> SettingsDataBuilder {
+    SettingsDataBuilder::default()
+  }
+}
+
+impl SettingsDataBuilder {
+  fn default_calls(&self) -> HashMap<String, String> {
+    let mut map: HashMap<String, String> = HashMap::new();
+    map.insert("IMAGE_TO_DATA".into(), "image_data_url".into());
+    map
+  }
+}
+
 pub enum Page {
-  Settings,
+  Settings(SettingsData),
   Main(MainData),
 }
 
 impl Page {
   pub fn id(&self) -> &str {
     match self {
-      Page::Settings => "lyra-settings",
+      Page::Settings(_) => "lyra-settings",
       Page::Main(_) => "lyra-main",
     }
   }
 
   pub fn init_script(&self) -> Result<String, anyhow::Error> {
     let data = match self {
-      Page::Settings => Value::from("{}"),
+      Page::Settings(data) => serde_json::to_value(data)?,
       Page::Main(data) => serde_json::to_value(data)?,
     };
     Ok(format!(

@@ -9,15 +9,14 @@ function importPage() {
     case 'lyra-settings':
       return import('./settings/settings');
     default:
-      return Promise.reject("No such page: " + window.__LYRA_PAGE__);
+      return Promise.reject('No such page: ' + window.__LYRA_PAGE__);
   }
 }
 
 importPage().then(({ default: Page }) =>
-  ReactDOM.createRoot(document.getElementById('root'))
-    .render(
-      <React.StrictMode>
-        <Page />
-      </React.StrictMode>
-    )
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <Page />
+    </React.StrictMode>
+  )
 );

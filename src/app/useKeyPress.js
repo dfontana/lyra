@@ -8,7 +8,7 @@ function useKeyPressResetable(targetKey, ref) {
   return useInternal(targetKey, ref);
 }
 
-export { useKeyPressResetable }
+export { useKeyPressResetable };
 
 function useInternal(targetKey, ref) {
   const [keyPressed, setKeyPressed] = useState(false);
@@ -30,7 +30,7 @@ function useInternal(targetKey, ref) {
         setKeyPressed(false);
         event.preventDefault();
       }
-    };
+    }
 
     let node = ref.current;
     node.addEventListener('keydown', downHandler);

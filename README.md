@@ -70,4 +70,3 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
   - [ ] Window Size, location
   - [ ] Colors (theming)
   - [ ] Font sizes
-

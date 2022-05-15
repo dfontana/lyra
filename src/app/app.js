@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/tauri'
-import { listen } from '@tauri-apps/api/event'
+import { invoke } from '@tauri-apps/api/tauri';
+import { listen } from '@tauri-apps/api/event';
 import SearchResult from './searchResult';
 import useKeyPress, { useKeyPressResetable } from './useKeyPress';
 import './app.css';
@@ -26,16 +26,15 @@ function App() {
       setSearch('');
       setSelected(0);
       setResults([]);
-    }).then(func => {
+    }).then((func) => {
       unlisten = func;
     });
     return () => {
       if (unlisten) {
         unlisten();
       }
-    }
+    };
   }, [setSearch, setSelected, setResults]);
-
 
   useEffect(() => {
     if (isArrowDown && selection < results.length - 1) {
@@ -62,7 +61,6 @@ function App() {
     }
   }, [isEscape, resetEscape]);
 
-
   const onKeyPress = ({ key }) => {
     switch (key) {
       case 'Enter':
@@ -71,9 +69,7 @@ function App() {
         return;
       default:
         // setSelected(0);
-        invoke(SEARCH, { search })
-          .then(setResults)
-          .catch(console.error);
+        invoke(SEARCH, { search }).then(setResults).catch(console.error);
     }
   };
 
@@ -103,7 +99,7 @@ function App() {
           selected={id === selection}
           style={{
             fontSize: `${FONT_SIZE}px`,
-            height: `${OPTION_HEIGHT}px`
+            height: `${OPTION_HEIGHT}px`,
           }}
         />
       ))}

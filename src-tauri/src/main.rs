@@ -7,14 +7,16 @@ mod config;
 mod launcher;
 mod page;
 
-use std::sync::Arc;
+use std::{borrow::Borrow, sync::Arc};
 
+use anyhow::anyhow;
 use closer::Closer;
 use launcher::{Launcher, SearchOption};
-use page::{MainData, Page};
+use page::{MainData, Page, SettingsData};
+use reqwest::header::{HeaderName, HeaderValue, CONTENT_TYPE};
 use tauri::{
-  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, SystemTray,
-  SystemTrayEvent, SystemTrayMenu, Window, WindowEvent,
+  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
+  MenuItem, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window, WindowEvent,
 };
 use tracing::{error, info};
 
@@ -26,6 +28,30 @@ struct State {
 fn close(window: tauri::Window) -> Result<(), String> {
   Closer::close(&window);
   Ok(())
+}
+
+#[tauri::command]
+async fn image_data_url(url: String) -> Result<String, String> {
+  _convert_image(url).await.map_err(|err| {
+    error!("Failed to parse image to data-url: {}", err);
+    "Could not convert image to data-url".into()
+  })
+}
+
+async fn _convert_image(url: String) -> Result<String, anyhow::Error> {
+  let resp = reqwest::get(url).await?;
+  let ctype = match resp.headers().get(CONTENT_TYPE) {
+    Some(v) => v.to_str()?,
+    None => return Err(anyhow!("Unknown content type")),
+  };
+  let ctype = match ctype {
+    "image/svg+xml" | "image/png" | "image/vnd.microsoft.icon" | "image/jpeg" => ctype.to_owned(),
+    _ => return Err(anyhow!("Unsupported Content Type: {}", ctype)),
+  };
+  let body = resp.bytes().await?;
+  let str = format!("data:{};base64,{}", ctype, base64::encode(&body));
+  info!("Found: {}", str);
+  Ok(str)
 }
 
 #[tauri::command]
@@ -55,9 +81,25 @@ fn submit(
 }
 
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
-  let page = Page::Settings;
+  let page = Page::Settings(SettingsData::builder().build()?);
   Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
     .center()
+    .title("Lyra Settings")
+    .focus()
+    .menu(Menu::with_items([
+      #[cfg(target_os = "macos")]
+      MenuEntry::Submenu(Submenu::new(
+        "Edit",
+        Menu::with_items([
+          MenuItem::Undo.into(),
+          MenuItem::Redo.into(),
+          MenuItem::Cut.into(),
+          MenuItem::Copy.into(),
+          MenuItem::Paste.into(),
+          MenuItem::SelectAll.into(),
+        ]),
+      )),
+    ]))
     .initialization_script(&page.init_script()?)
     .build()?;
   Ok(())
@@ -151,7 +193,12 @@ fn main() {
     .manage(State {
       launcher: Launcher::new(config),
     })
-    .invoke_handler(tauri::generate_handler![close, submit, search])
+    .invoke_handler(tauri::generate_handler![
+      close,
+      image_data_url,
+      submit,
+      search
+    ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
