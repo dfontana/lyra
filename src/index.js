@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
 
 function importPage() {
   switch (window.__LYRA_PAGE__) {
