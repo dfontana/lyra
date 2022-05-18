@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Button,
   Table,
@@ -12,7 +12,7 @@ import {
 } from '@geist-ui/core';
 import { X } from '@geist-ui/icons';
 import { invoke } from '@tauri-apps/api/tauri';
-const { IMAGE_TO_DATA } = window.__LYRA__.calls;
+const { IMAGE_TO_DATA, SAVE_BOOKMARKS } = window.__LYRA__.calls;
 
 function newRow() {
   return {
@@ -29,19 +29,22 @@ function RenderIconBox(setData, _, rowData, rowIndex) {
   const { setToast } = useToasts();
   useClickAway(ref, () => setSelected(false));
 
-  const onPaste = (event) => {
-    event.preventDefault();
-    const url = (event.clipboardData || window.clipboardData).getData('text');
-    invoke(IMAGE_TO_DATA, { url })
-      .then((icon) => {
-        console.log(icon);
-        setData((prev) =>
-          prev.map((item, dataIndex) => (dataIndex !== rowIndex ? item : { ...item, icon }))
-        );
-      })
-      .catch((err) => setToast({ text: err, type: 'error' }));
-  };
-  const onClick = () => setSelected((prev) => !prev);
+  const onPaste = useCallback(
+    (event) => {
+      event.preventDefault();
+      const url = (event.clipboardData || window.clipboardData).getData('text');
+      invoke(IMAGE_TO_DATA, { url })
+        .then((icon) => {
+          setData((prev) =>
+            prev.map((item, dataIndex) => (dataIndex !== rowIndex ? item : { ...item, icon }))
+          );
+        })
+        .catch((err) => setToast({ text: err, type: 'error' }));
+    },
+    [setData, setToast, rowIndex]
+  );
+
+  const onClick = useCallback(() => setSelected((prev) => !prev), [setSelected]);
 
   return (
     <div
@@ -56,9 +59,10 @@ function RenderIconBox(setData, _, rowData, rowIndex) {
 }
 
 function RenderRemoveButton(setData, rowIndex) {
-  const removeHandler = () => {
+  const removeHandler = useCallback(() => {
+    // TODO this deletes the wrong items (last item in list it appears)
     setData((last) => last.filter((_, dataIndex) => dataIndex !== rowIndex));
-  };
+  }, [setData, rowIndex]);
   return (
     <Button
       type="error"
@@ -73,31 +77,40 @@ function RenderRemoveButton(setData, rowIndex) {
 }
 
 function RenderInput(setData, field, rowData, rowIndex) {
-  const { state, setState, reset, bindings } = useInput(rowData[field]);
-  // TODO hook on state to capture changes/submit.
+  const { state, bindings } = useInput(rowData[field]);
+  useEffect(() => {
+    setData((prev) => {
+      prev[rowIndex][field] = state;
+      return prev;
+    });
+  }, [state, setData, field, rowIndex]);
   return <Input {...bindings} />;
 }
 
-export default function BookmarkletManager() {
+export default function BookmarkletManager({ initialConfig }) {
+  console.log(initialConfig);
   const { setToast } = useToasts();
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(Object.values(initialConfig.bookmarks));
 
   const renderIconBox = useCallback(
     (v, row, idx) => RenderIconBox(setData, v, row, idx),
     [setData]
   );
-  const renderDelete = useCallback((v, row, idx) => RenderRemoveButton(setData, idx), [setData]);
+  const renderDelete = useCallback((__, _, idx) => RenderRemoveButton(setData, idx), [setData]);
   const renderInput = useCallback(
     (field) => (_, row, idx) => RenderInput(setData, field, row, idx),
     [setData]
   );
-  const addRow = () => {
+
+  const addRow = useCallback(() => {
     setData((prev) => [...prev, newRow()]);
-  };
-  const saveForm = () => {
-    // TODO write out 'data' server-side
-    setToast({ text: 'Saved!', type: 'success' });
-  };
+  }, [setData]);
+
+  const saveForm = useCallback(() => {
+    invoke(SAVE_BOOKMARKS, { bookmarks: data })
+      .then(() => setToast({ text: 'Saved!', type: 'success' }))
+      .catch((err) => setToast({ text: `Error: ${err}`, type: 'error', delay: 10000 }));
+  }, [data, setToast]);
 
   return (
     <Fieldset>

@@ -9,15 +9,23 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 - `yarn tauri build` to package app
   - Binary built: `src-tauri/target/release/[app name]`
   - Installers built: `src-tauri/target/release/bundle/`
+- `yarn react-devtools` to debug
 
 ### Notes
 
 #### TODO
 
-- Get icons generated: https://tauri.studio/v1/guides/examples/icons/
-- Optimize app size with:
-  - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
-  - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
+- Fix the TODO bugs in bookmark management
+- Get a very basic launcher functionality implemented (perhaps return all items without filtering)
+- Use the open crate to open the bookmarks
+- Impl remaining functionality for launching/searching bookmarks
+- Polish:
+  - Launch UI
+  - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
+  - Optimize app size with:
+    - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
+    - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
+  - Fix the debug script (for dev tools) hardcoded in index.html. Ideally this is bound in when running dev.
 
 #### React
 

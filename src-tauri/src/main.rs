@@ -7,22 +7,17 @@ mod config;
 mod launcher;
 mod page;
 
-use std::{borrow::Borrow, sync::Arc};
-
 use anyhow::anyhow;
 use closer::Closer;
+use config::{Bookmark, Config, InnerConfig};
 use launcher::{Launcher, SearchOption};
 use page::{MainData, Page, SettingsData};
-use reqwest::header::{HeaderName, HeaderValue, CONTENT_TYPE};
+use reqwest::header::CONTENT_TYPE;
 use tauri::{
   ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
   MenuItem, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window, WindowEvent,
 };
 use tracing::{error, info};
-
-struct State {
-  launcher: Launcher,
-}
 
 #[tauri::command]
 fn close(window: tauri::Window) -> Result<(), String> {
@@ -55,20 +50,33 @@ async fn _convert_image(url: String) -> Result<String, anyhow::Error> {
 }
 
 #[tauri::command]
+fn get_config(config: tauri::State<Config>) -> InnerConfig {
+  (*config.config.lock().unwrap()).clone()
+}
+
+#[tauri::command]
+fn save_bookmarks(config: tauri::State<Config>, bookmarks: Vec<Bookmark>) -> Result<(), String> {
+  config.update_bookmarks(bookmarks).map_err(|err| {
+    error!("Failed to save bookmarks: {}", err);
+    "Failed to save bookmarks".into()
+  })
+}
+
+#[tauri::command]
 async fn search(
-  state: tauri::State<'_, State>,
+  launcher: tauri::State<'_, Launcher>,
   search: String,
 ) -> Result<Vec<SearchOption>, String> {
-  Ok(state.launcher.get_options(&search).await)
+  Ok(launcher.get_options(&search).await)
 }
 
 #[tauri::command]
 fn submit(
-  state: tauri::State<State>,
+  launcher: tauri::State<Launcher>,
   selection: usize,
   window: tauri::Window,
 ) -> Result<(), String> {
-  match state.launcher.launch(selection) {
+  match launcher.launch(selection) {
     Ok(()) => {
       Closer::close(&window);
       Ok(())
@@ -81,6 +89,7 @@ fn submit(
 }
 
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
+  // TODO should check if the window already exists and focus it, rather than rebuild it!
   let page = Page::Settings(SettingsData::builder().build()?);
   Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
     .center()
@@ -111,8 +120,8 @@ fn main() {
     return;
   }
 
-  let config = match config::get_or_init_config() {
-    Ok(c) => Arc::new(c),
+  let config = match Config::get_or_init_config() {
+    Ok(c) => c,
     Err(err) => {
       info!("Failed to initialize config: {}", err);
       return;
@@ -190,12 +199,13 @@ fn main() {
         })?;
       Ok(())
     })
-    .manage(State {
-      launcher: Launcher::new(config),
-    })
+    .manage(config.clone())
+    .manage(Launcher::new(config))
     .invoke_handler(tauri::generate_handler![
       close,
+      get_config,
       image_data_url,
+      save_bookmarks,
       submit,
       search
     ])

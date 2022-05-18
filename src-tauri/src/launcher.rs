@@ -1,10 +1,9 @@
 use serde::Serialize;
 
 use crate::config::Config;
-use std::sync::Arc;
 
 pub struct Launcher {
-  config: Arc<Config>,
+  config: Config,
 }
 
 #[derive(Serialize)]
@@ -14,7 +13,7 @@ pub struct SearchOption {
 }
 
 impl Launcher {
-  pub fn new(config: Arc<Config>) -> Self {
+  pub fn new(config: Config) -> Self {
     Launcher { config }
   }
 
