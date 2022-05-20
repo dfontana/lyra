@@ -17,7 +17,7 @@ function App() {
   const searchRef = useRef();
   const isArrowDown = useKeyPress('ArrowDown', searchRef);
   const isArrowUp = useKeyPress('ArrowUp', searchRef);
-  const isEnter = useKeyPress('Enter', searchRef);
+  const [isEnter, resetEnter] = useKeyPressResetable('Enter', searchRef);
   const [isEscape, resetEscape] = useKeyPressResetable('Escape', searchRef);
 
   useEffect(() => {
@@ -26,6 +26,8 @@ function App() {
       setSearch('');
       setSelected(0);
       setResults([]);
+      resetEnter();
+      resetEscape();
     }).then((func) => {
       unlisten = func;
     });
@@ -34,7 +36,7 @@ function App() {
         unlisten();
       }
     };
-  }, [setSearch, setSelected, setResults]);
+  }, [setSearch, setSelected, setResults, resetEnter, resetEscape]);
 
   useEffect(() => {
     if (isArrowDown && selection < results.length - 1) {
@@ -56,10 +58,9 @@ function App() {
 
   useEffect(() => {
     if (isEscape) {
-      resetEscape();
       invoke(CLOSE).catch(console.error);
     }
-  }, [isEscape, resetEscape]);
+  }, [isEscape]);
 
   const onKeyPress = ({ key }) => {
     switch (key) {
@@ -68,7 +69,6 @@ function App() {
       case 'ArrowUp':
         return;
       default:
-        // setSelected(0);
         invoke(SEARCH, { search }).then(setResults).catch(console.error);
     }
   };
@@ -91,11 +91,12 @@ function App() {
           fontSize: `${FONT_SIZE}px`,
         }}
       />
-      {results.map(({ id, value }) => (
+      {results.map(({ id, label, icon }) => (
         <SearchResult
           key={id}
           id={id}
-          value={value}
+          value={label}
+          icon={icon}
           selected={id === selection}
           style={{
             fontSize: `${FONT_SIZE}px`,

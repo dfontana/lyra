@@ -89,8 +89,12 @@ fn submit(
 }
 
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
-  // TODO should check if the window already exists and focus it, rather than rebuild it!
   let page = Page::Settings(SettingsData::builder().build()?);
+  if let Some(win) = app.get_window(&page.id()) {
+    win.show()?;
+    win.set_focus()?;
+    return Ok(());
+  }
   Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
     .center()
     .title("Lyra Settings")
@@ -149,9 +153,9 @@ fn main() {
       _ => {}
     })
     .on_window_event(|event| match event.event() {
-      WindowEvent::Focused(focused) if !focused => {
+      WindowEvent::Focused(focused) => {
         if !focused && event.window().label() == Page::Main(MainData::default()).id() {
-          Closer::close(&event.window());
+          // Closer::close(&event.window());
         }
       }
       _ => {}
@@ -163,7 +167,7 @@ fn main() {
       // TODO code assumes input is 38px large, and each result is 18px with max of 10 results shown.
       let page = Page::Main(
         MainData::builder()
-          .style(("OPTION_HEIGHT".into(), 18.into()))
+          .style(("OPTION_HEIGHT".into(), 38.into()))
           .style(("INPUT_HEIGHT".into(), 38.into()))
           .style(("FONT_SIZE".into(), 16.into()))
           .build()?,

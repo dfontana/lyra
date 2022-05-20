@@ -27,10 +27,10 @@ pub struct InnerConfig {
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Bookmark {
-  label: String,
-  shortname: String,
-  link: String,
-  icon: String,
+  pub label: String,
+  pub shortname: String,
+  pub link: String,
+  pub icon: String,
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]

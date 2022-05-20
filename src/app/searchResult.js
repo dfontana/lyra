@@ -1,12 +1,15 @@
 import React from 'react';
-import css from './app.css';
+import './app.css';
 
-const className = (s) => `${css.searchResult} ${s ? css.selected : ''}`;
+const className = (s) => `searchResult ${s ? 'selected' : ''}`;
 
-function SearchResult({ id, value, selected, ...rest }) {
+function SearchResult({ id, value, icon, selected, ...rest }) {
   return (
     <div className={className(selected)} {...rest}>
-      {id}: {value}
+      <img className="searchIcon" src={icon} alt="" />
+      <span>
+        {id}: {value}
+      </span>
     </div>
   );
 }

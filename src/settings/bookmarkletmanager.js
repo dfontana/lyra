@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   Button,
   Table,
@@ -8,10 +8,10 @@ import {
   useClickAway,
   useToasts,
   Fieldset,
-  useInput,
 } from '@geist-ui/core';
 import { X } from '@geist-ui/icons';
 import { invoke } from '@tauri-apps/api/tauri';
+import './bookmarklets.css';
 const { IMAGE_TO_DATA, SAVE_BOOKMARKS } = window.__LYRA__.calls;
 
 function newRow() {
@@ -60,7 +60,6 @@ function RenderIconBox(setData, _, rowData, rowIndex) {
 
 function RenderRemoveButton(setData, rowIndex) {
   const removeHandler = useCallback(() => {
-    // TODO this deletes the wrong items (last item in list it appears)
     setData((last) => last.filter((_, dataIndex) => dataIndex !== rowIndex));
   }, [setData, rowIndex]);
   return (
@@ -76,31 +75,26 @@ function RenderRemoveButton(setData, rowIndex) {
   );
 }
 
-function RenderInput(setData, field, rowData, rowIndex) {
-  const { state, bindings } = useInput(rowData[field]);
-  useEffect(() => {
-    setData((prev) => {
-      prev[rowIndex][field] = state;
-      return prev;
-    });
-  }, [state, setData, field, rowIndex]);
-  return <Input {...bindings} />;
-}
-
 export default function BookmarkletManager({ initialConfig }) {
-  console.log(initialConfig);
   const { setToast } = useToasts();
   const [data, setData] = useState(Object.values(initialConfig.bookmarks));
 
-  const renderIconBox = useCallback(
-    (v, row, idx) => RenderIconBox(setData, v, row, idx),
-    [setData]
-  );
-  const renderDelete = useCallback((__, _, idx) => RenderRemoveButton(setData, idx), [setData]);
-  const renderInput = useCallback(
-    (field) => (_, row, idx) => RenderInput(setData, field, row, idx),
-    [setData]
-  );
+  const renderIconBox = (v, row, idx) => RenderIconBox(setData, v, row, idx);
+  const renderDelete = (__, _, idx) => RenderRemoveButton(setData, idx);
+  const renderInput = (field) => (value, _, rowIndex) => {
+    const onChange = (event) => {
+      setData((last) => {
+        return last.map((item, dataIndex) => {
+          if (dataIndex !== rowIndex) return item;
+          return {
+            ...item,
+            [field]: event.target.value,
+          };
+        });
+      });
+    };
+    return <Input scale={0.5} width="100%" value={value} onChange={onChange} />;
+  };
 
   const addRow = useCallback(() => {
     setData((prev) => [...prev, newRow()]);

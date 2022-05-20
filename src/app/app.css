@@ -20,6 +20,15 @@
 .searchResult {
   color: #54e6ae;
   background-color: aliceblue;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  max-height: 28px;
+  margin: 5px;
+  border-radius: 50%;
+  border: 1px solid black;
 }
 
 .selected {

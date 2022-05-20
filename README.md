@@ -15,7 +15,13 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### TODO
 
-- Fix the TODO bugs in bookmark management
+- Select image, click delete to clear it / paste over it.
+- Crop non-circular images
+  - Maybe just try Geist? Avatar handles for you kinda
+- JS Key errors:
+  - Arrow down / up triggers multiple times. Either use the resetable or see why
+  - Keys don't trigger if not focused in input.
+  - (Geist has a useKeyboard hook that will probs solve this https://geist-ui.dev/en-us/hooks/use-keyboard)
 - Get a very basic launcher functionality implemented (perhaps return all items without filtering)
 - Use the open crate to open the bookmarks
 - Impl remaining functionality for launching/searching bookmarks
