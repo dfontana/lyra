@@ -75,13 +75,7 @@ function App() {
         case 'ArrowUp':
           return;
         default:
-          invoke(SEARCH, { search })
-            .then((results) => {
-              console.log(results);
-              return results;
-            })
-            .then(setResults)
-            .catch(console.error);
+          invoke(SEARCH, { search }).then(setResults).catch(console.error);
       }
     },
     [search]

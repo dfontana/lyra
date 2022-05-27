@@ -88,7 +88,7 @@ fn submit(
   selected: SearchOption,
   window: tauri::Window,
 ) -> Result<(), String> {
-  match launcher.launch(selected) {
+  match launcher.launch(&window.app_handle().shell_scope(), selected) {
     Ok(()) => {
       Closer::close(&window);
       Ok(())

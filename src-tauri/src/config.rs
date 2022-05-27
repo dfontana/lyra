@@ -80,6 +80,14 @@ impl Config {
     fs::write(&self.file, toml::to_string(&*inner)?)?;
     Ok(())
   }
+
+  pub fn get_url_from_label(&self, label: &str) -> String {
+    if let Some(bookmark) = (*self.config.lock().unwrap()).bookmarks.get(label) {
+      bookmark.link.to_owned()
+    } else {
+      "".to_owned()
+    }
+  }
 }
 
 pub fn init_logs() -> Result<(), anyhow::Error> {

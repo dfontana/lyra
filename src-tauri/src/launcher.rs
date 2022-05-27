@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use skim::prelude::*;
+use tauri::{api::shell::open, ShellScope};
 
 use crate::config::{Bookmark, Config};
 
@@ -70,9 +71,9 @@ impl Launcher {
     options
   }
 
-  pub fn launch(&self, selected: SearchOption) -> Result<(), anyhow::Error> {
-    // TODO use the label to find the bookmark
-    println!("{:?}", selected);
+  pub fn launch(&self, scope: &ShellScope, selected: SearchOption) -> Result<(), anyhow::Error> {
+    let url = self.config.get_url_from_label(&selected.label);
+    open(scope, url, None)?;
     Ok(())
   }
 }
