@@ -35,11 +35,11 @@ pub struct Bookmark {
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Searcher {
-  label: String,
-  shortname: String,
-  template_link: String,
-  arg_count: usize,
-  icon: String,
+  pub label: String,
+  pub shortname: String,
+  pub template_link: String,
+  pub arg_count: usize,
+  pub icon: String,
 }
 
 impl Config {

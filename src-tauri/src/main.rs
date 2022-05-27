@@ -4,15 +4,13 @@
 )]
 mod closer;
 mod config;
+mod convert;
 mod launcher;
 mod page;
 
-use anyhow::anyhow;
-use closer::Closer;
 use config::{Bookmark, Config, InnerConfig};
 use launcher::{Launcher, SearchOption};
 use page::{MainData, Page, SettingsData};
-use reqwest::header::CONTENT_TYPE;
 use tauri::{
   ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, LogicalSize, Manager, Menu,
   MenuEntry, MenuItem, Size, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window,
@@ -22,32 +20,16 @@ use tracing::{error, info};
 
 #[tauri::command]
 fn close(window: tauri::Window) -> Result<(), String> {
-  Closer::close(&window);
+  closer::close(&window);
   Ok(())
 }
 
 #[tauri::command]
 async fn image_data_url(url: String) -> Result<String, String> {
-  _convert_image(url).await.map_err(|err| {
+  convert::convert_image(url).await.map_err(|err| {
     error!("Failed to parse image to data-url: {}", err);
     "Could not convert image to data-url".into()
   })
-}
-
-async fn _convert_image(url: String) -> Result<String, anyhow::Error> {
-  let resp = reqwest::get(url).await?;
-  let ctype = match resp.headers().get(CONTENT_TYPE) {
-    Some(v) => v.to_str()?,
-    None => return Err(anyhow!("Unknown content type")),
-  };
-  let ctype = match ctype {
-    "image/svg+xml" | "image/png" | "image/vnd.microsoft.icon" | "image/jpeg" => ctype.to_owned(),
-    _ => return Err(anyhow!("Unsupported Content Type: {}", ctype)),
-  };
-  let body = resp.bytes().await?;
-  let str = format!("data:{};base64,{}", ctype, base64::encode(&body));
-  info!("Found: {}", str);
-  Ok(str)
 }
 
 #[tauri::command]
@@ -90,7 +72,7 @@ fn submit(
 ) -> Result<(), String> {
   match launcher.launch(&window.app_handle().shell_scope(), selected) {
     Ok(()) => {
-      Closer::close(&window);
+      closer::close(&window);
       Ok(())
     }
     Err(err) => {
@@ -205,7 +187,7 @@ fn main() {
             .get_window(page.id())
             .expect("Framework should have built");
           let is_updated = match win.is_visible() {
-            Ok(true) => Ok(Closer::close(&win)),
+            Ok(true) => Ok(closer::close(&win)),
             Ok(false) => win.set_focus(),
             Err(err) => Err(err),
           };

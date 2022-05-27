@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use skim::prelude::*;
 use tauri::{api::shell::open, ShellScope};
 
-use crate::config::{Bookmark, Config};
+use crate::config::{Bookmark, Config, Searcher};
 
 pub struct Launcher {
   config: Config,
@@ -17,24 +17,43 @@ pub struct SearchOption {
   icon: String,
 }
 
-impl AsRef<str> for Bookmark {
+impl AsRef<str> for SearchOption {
   fn as_ref(&self) -> &str {
     self.label.as_str()
   }
 }
 
-fn options_to_receiver(items: &HashMap<String, Bookmark>) -> SkimItemReceiver {
-  let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
-  items.iter().for_each(|(_, bk)| {
-    let _ = tx_items.send(Arc::new(bk.to_owned()));
-  });
-  drop(tx_items); // indicates that all items have been sent
-  rx_items
+impl Into<SearchOption> for &Bookmark {
+  fn into(self) -> SearchOption {
+    todo!()
+  }
+}
+
+impl Into<SearchOption> for &Searcher {
+  fn into(self) -> SearchOption {
+    todo!()
+  }
 }
 
 impl Launcher {
   pub fn new(config: Config) -> Self {
     Launcher { config }
+  }
+
+  fn options_to_receiver(&self) -> SkimItemReceiver {
+    let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
+
+    let conf = *self.config.config.lock().unwrap();
+    conf
+      .bookmarks
+      .iter()
+      .map(|(l, bk)| (l, bk.into()))
+      .chain(conf.searchers.iter().map(|(l, sh)| (l, sh.into())))
+      .for_each(|(_, se): (&String, SearchOption)| {
+        let _ = tx_items.send(Arc::new(se));
+      });
+    drop(tx_items); // indicates that all items have been sent
+    rx_items
   }
 
   pub async fn get_options(&self, search: &str) -> Vec<SearchOption> {
@@ -47,7 +66,7 @@ impl Launcher {
       .fuzzy_algorithm(FuzzyAlgorithm::SkimV2)
       .build()
       .create_engine_with_case(search, CaseMatching::Smart);
-    let receiver = options_to_receiver(&(*self.config.config.lock().unwrap()).bookmarks);
+    let receiver = self.options_to_receiver();
     let mut options: Vec<SearchOption> = receiver
       .iter()
       .filter_map(|bk| match fuzzy_engine.match_item(bk.clone()) {
@@ -56,16 +75,12 @@ impl Launcher {
           m.rank.iter().sum(),
           (*bk)
             .as_any()
-            .downcast_ref::<Bookmark>()
+            .downcast_ref::<SearchOption>()
             .unwrap()
             .to_owned(),
         )),
       })
-      .map(|(rank, bk)| SearchOption {
-        rank,
-        label: bk.label.clone(),
-        icon: bk.icon.clone(),
-      })
+      .map(|(rank, opt)| SearchOption { rank, ..opt })
       .collect();
     options.sort_by(|a, b| a.rank.cmp(&b.rank));
     options

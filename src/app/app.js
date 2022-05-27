@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
+import { useCallback, useEffect, useState } from 'react';
+import useNavigation from './useNavigation';
 import SearchResult from './searchResult';
-import { useKeyPressResetable } from './useKeyPress';
 import './app.css';
 
 const { RESET } = window.__LYRA__.events;
@@ -11,22 +11,19 @@ const { INPUT_HEIGHT, OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
 function App() {
   const [search, setSearch] = useState('');
-  const [selection, setSelected] = useState(0);
   const [results, setResults] = useState([]);
-
-  const [isArrowDown, resetDown] = useKeyPressResetable('ArrowDown');
-  const [isArrowUp, resetUp] = useKeyPressResetable('ArrowUp');
-  const [isEnter, resetEnter] = useKeyPressResetable('Enter');
-  const [isEscape, resetEscape] = useKeyPressResetable('Escape');
+  const [selection, resetNav] = useNavigation({
+    results,
+    onSubmit: (selection) => invoke(SUBMIT, { selected: results[selection] }).catch(console.error),
+    onClose: () => invoke(CLOSE).catch(console.error),
+  });
 
   useEffect(() => {
     let unlisten = null;
     listen(RESET, () => {
       setSearch('');
-      setSelected(0);
       setResults([]);
-      resetEnter();
-      resetEscape();
+      resetNav();
     }).then((func) => {
       unlisten = func;
     });
@@ -35,35 +32,7 @@ function App() {
         unlisten();
       }
     };
-  }, [setSearch, setSelected, setResults, resetEnter, resetEscape]);
-
-  useEffect(() => {
-    if (isArrowDown && selection < results.length - 1) {
-      const nextIdx = selection + 1;
-      setSelected(nextIdx);
-      resetDown();
-    }
-  }, [isArrowDown, resetDown, selection, setSelected, results]);
-
-  useEffect(() => {
-    if (isArrowUp && selection > 0) {
-      const nextIdx = selection - 1;
-      setSelected(nextIdx);
-      resetUp();
-    }
-  }, [isArrowUp, resetUp, selection, setSelected]);
-
-  useEffect(() => {
-    if (isEnter) {
-      invoke(SUBMIT, { selected: results[selection] }).catch(console.error);
-    }
-  }, [isEnter, selection, results]);
-
-  useEffect(() => {
-    if (isEscape) {
-      invoke(CLOSE).catch(console.error);
-    }
-  }, [isEscape]);
+  }, [setSearch, setResults, resetNav]);
 
   const onChange = useCallback((e) => setSearch(e.target.value), [setSearch]);
   const onMouseDown = useCallback((e) => e.preventDefault(), []);
