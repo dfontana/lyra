@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use skim::prelude::*;
 use tauri::{api::shell::open, ShellScope};
@@ -17,6 +15,16 @@ pub struct SearchOption {
   icon: String,
 }
 
+impl SearchOption {
+  fn with_rank(other: &SearchOption, rank: i32) -> SearchOption {
+    SearchOption {
+      rank,
+      label: other.label.clone(),
+      icon: other.icon.clone(),
+    }
+  }
+}
+
 impl AsRef<str> for SearchOption {
   fn as_ref(&self) -> &str {
     self.label.as_str()
@@ -25,13 +33,21 @@ impl AsRef<str> for SearchOption {
 
 impl Into<SearchOption> for &Bookmark {
   fn into(self) -> SearchOption {
-    todo!()
+    SearchOption {
+      rank: 0,
+      label: self.label.clone(),
+      icon: self.icon.clone(),
+    }
   }
 }
 
 impl Into<SearchOption> for &Searcher {
   fn into(self) -> SearchOption {
-    todo!()
+    SearchOption {
+      rank: 0,
+      label: self.label.clone(),
+      icon: self.icon.clone(),
+    }
   }
 }
 
@@ -43,7 +59,7 @@ impl Launcher {
   fn options_to_receiver(&self) -> SkimItemReceiver {
     let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
 
-    let conf = *self.config.config.lock().unwrap();
+    let conf = self.config.config.lock().unwrap();
     conf
       .bookmarks
       .iter()
@@ -71,16 +87,12 @@ impl Launcher {
       .iter()
       .filter_map(|bk| match fuzzy_engine.match_item(bk.clone()) {
         None => None,
-        Some(m) => Some((
-          m.rank.iter().sum(),
-          (*bk)
-            .as_any()
-            .downcast_ref::<SearchOption>()
-            .unwrap()
-            .to_owned(),
-        )),
+        Some(m) => {
+          let rank = m.rank.iter().sum();
+          let opt = (*bk).as_any().downcast_ref::<SearchOption>().unwrap();
+          Some(SearchOption::with_rank(opt, rank))
+        }
       })
-      .map(|(rank, opt)| SearchOption { rank, ..opt })
       .collect();
     options.sort_by(|a, b| a.rank.cmp(&b.rank));
     options
