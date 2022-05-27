@@ -9,25 +9,30 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 - `yarn tauri build` to package app
   - Binary built: `src-tauri/target/release/[app name]`
   - Installers built: `src-tauri/target/release/bundle/`
+- `yarn react-devtools` to debug
 
 ### Notes
 
 #### TODO
 
-- Config file support from `~/.config/lyra`
-- Get icons generated: https://tauri.studio/v1/guides/examples/icons/
-- Optimize app size with:
-  - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
-  - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
+- Settings: Select image, click delete to clear it / paste over it.
+- uncomment focus lost code
+- Impl remaining functionality for searching bookmarks
+- Fix assumption across front/backend that height is 38px high
+  - Can the window just be made flexible? Like min/max width/height?
+- Polish:
+  - Launch UI
+  - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
+  - Optimize app size with:
+    - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
+    - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
+  - Fix the debug script (for dev tools) hardcoded in index.html. Ideally this is bound in when running dev.
+    - Similarly, disable the focus lost code using this
+  - Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
 
 #### React
 
 - Uses css-modules https://github.com/css-modules/css-modules
-
-#### Tauri
-
-- May need to handle keeping app open on last window gone; if so: https://github.com/tauri-apps/tauri/discussions/2684
-- Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
 
 ### Roadmap
 
@@ -45,7 +50,7 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 - [ ] fzf on app folder?
   - [ ] Only show results for platform specific file type (exe, app)
 
-#### MVP 3: Windows / Linux Suppport
+#### MVP 3: Windows / Linux Support
 
 - [ ] Windows works
 - [ ] Linux works
@@ -71,4 +76,3 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
   - [ ] Window Size, location
   - [ ] Colors (theming)
   - [ ] Font sizes
-

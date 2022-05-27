@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@geist-ui/core": "^2.3.8",
+    "@geist-ui/icons": "^1.0.2",
     "@tauri-apps/api": "^1.0.0-rc.5",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^13.0.0",
@@ -39,6 +41,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.0.0-rc.10",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "react-devtools": "^4.24.6"
   }
 }
