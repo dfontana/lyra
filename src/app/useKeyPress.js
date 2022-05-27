@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 
-export default function useKeyPress(targetKey, ref) {
-  return useInternal(targetKey, ref)[0];
+export default function useKeyPress(targetKey) {
+  return useInternal(targetKey)[0];
 }
 
-function useKeyPressResetable(targetKey, ref) {
-  return useInternal(targetKey, ref);
+function useKeyPressResetable(targetKey) {
+  return useInternal(targetKey);
 }
 
 export { useKeyPressResetable };
 
-function useInternal(targetKey, ref) {
+function useInternal(targetKey) {
   const [keyPressed, setKeyPressed] = useState(false);
 
   function reset() {
@@ -32,14 +32,13 @@ function useInternal(targetKey, ref) {
       }
     }
 
-    let node = ref.current;
-    node.addEventListener('keydown', downHandler);
-    node.addEventListener('keyup', upHandler);
+    document.addEventListener('keydown', downHandler);
+    document.addEventListener('keyup', upHandler);
     return () => {
-      node.removeEventListener('keydown', downHandler);
-      node.removeEventListener('keyup', upHandler);
+      document.removeEventListener('keydown', downHandler);
+      document.removeEventListener('keyup', upHandler);
     };
-  }, [targetKey, ref]);
+  }, [targetKey]);
 
   return [keyPressed, reset];
 }

@@ -14,8 +14,9 @@ use launcher::{Launcher, SearchOption};
 use page::{MainData, Page, SettingsData};
 use reqwest::header::CONTENT_TYPE;
 use tauri::{
-  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
-  MenuItem, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window, WindowEvent,
+  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, LogicalSize, Manager, Menu,
+  MenuEntry, MenuItem, Size, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window,
+  WindowEvent,
 };
 use tracing::{error, info};
 
@@ -64,19 +65,30 @@ fn save_bookmarks(config: tauri::State<Config>, bookmarks: Vec<Bookmark>) -> Res
 
 #[tauri::command]
 async fn search(
+  window: tauri::Window,
   launcher: tauri::State<'_, Launcher>,
   search: String,
 ) -> Result<Vec<SearchOption>, String> {
-  Ok(launcher.get_options(&search).await)
+  let options = launcher.get_options(&search).await;
+  window
+    .set_size(Size::Logical(LogicalSize {
+      width: 600f64,
+      height: 38f64 * (options.len() + 1) as f64,
+    }))
+    .map_err(|e| {
+      error!("Failed to resize window {}", e);
+      "Failed to resize window"
+    })?;
+  Ok(options)
 }
 
 #[tauri::command]
 fn submit(
   launcher: tauri::State<Launcher>,
-  selection: usize,
+  selected: SearchOption,
   window: tauri::Window,
 ) -> Result<(), String> {
-  match launcher.launch(selection) {
+  match launcher.launch(selected) {
     Ok(()) => {
       Closer::close(&window);
       Ok(())
@@ -174,7 +186,7 @@ fn main() {
       );
 
       Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
-        .inner_size(600f64, 218f64)
+        .inner_size(600f64, 38f64)
         .resizable(false)
         .always_on_top(true)
         .decorations(false)
