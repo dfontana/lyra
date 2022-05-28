@@ -1,14 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import {
-  Button,
-  Table,
-  Tooltip,
-  Avatar,
-  Input,
-  useClickAway,
-  useToasts,
-  Fieldset,
-} from '@geist-ui/core';
+import React, { useState, useCallback } from 'react';
+import { Button, Table, Tooltip, Avatar, Input, useToasts, Fieldset } from '@geist-ui/core';
 import { X } from '@geist-ui/icons';
 import { invoke } from '@tauri-apps/api/tauri';
 import './bookmarklets.css';
@@ -24,10 +15,7 @@ function newRow() {
 }
 
 function RenderIconBox(setData, _, rowData, rowIndex) {
-  const ref = useRef();
-  const [selected, setSelected] = useState(false);
   const { setToast } = useToasts();
-  useClickAway(ref, () => setSelected(false));
 
   const onPaste = useCallback(
     (event) => {
@@ -44,15 +32,18 @@ function RenderIconBox(setData, _, rowData, rowIndex) {
     [setData, setToast, rowIndex]
   );
 
-  const onClick = useCallback(() => setSelected((prev) => !prev), [setSelected]);
-
+  const onKeyUp = useCallback(
+    (e) => {
+      if (e.key === 'Backspace') {
+        setData((prev) =>
+          prev.map((item, dataIndex) => (dataIndex !== rowIndex ? item : { ...item, icon: '' }))
+        );
+      }
+    },
+    [setData, rowIndex]
+  );
   return (
-    <div
-      ref={ref}
-      style={{ outline: selected ? 'auto' : 'none' }}
-      onClick={onClick}
-      onPaste={onPaste}
-    >
+    <div onPaste={onPaste} onKeyUp={onKeyUp} tabIndex="0" className="iconBox">
       <Avatar src={rowData.icon} style={{ background: 'black' }} />
     </div>
   );

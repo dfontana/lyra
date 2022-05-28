@@ -15,19 +15,17 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### TODO
 
-- Settings: Select image, click delete to clear it / paste over it.
-- uncomment focus lost code
-- Impl remaining functionality for searching bookmarks
+- Fix the debug script (for dev tools) hardcoded in index.html. Ideally this is bound in when running dev.
+  - Similarly, disable the focus lost code using this
 - Fix assumption across front/backend that height is 38px high
   - Can the window just be made flexible? Like min/max width/height?
+- Impl remaining functionality for searching bookmarks
 - Polish:
   - Launch UI
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
   - Optimize app size with:
     - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
     - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
-  - Fix the debug script (for dev tools) hardcoded in index.html. Ideally this is bound in when running dev.
-    - Similarly, disable the focus lost code using this
   - Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
 
 #### React
