@@ -8,7 +8,7 @@ mod convert;
 mod launcher;
 mod page;
 
-use config::{Bookmark, Config, InnerConfig};
+use config::{Bookmark, Config, InnerConfig, Styles};
 use launcher::{Launcher, SearchOption};
 use page::{MainData, Page, SettingsData};
 use tauri::{
@@ -34,7 +34,7 @@ async fn image_data_url(url: String) -> Result<String, String> {
 
 #[tauri::command]
 fn get_config(config: tauri::State<Config>) -> InnerConfig {
-  (*config.config.lock().unwrap()).clone()
+  config.get().clone()
 }
 
 #[tauri::command]
@@ -49,13 +49,19 @@ fn save_bookmarks(config: tauri::State<Config>, bookmarks: Vec<Bookmark>) -> Res
 async fn search(
   window: tauri::Window,
   launcher: tauri::State<'_, Launcher>,
+  config: tauri::State<'_, Config>,
   search: String,
 ) -> Result<Vec<SearchOption>, String> {
   let options = launcher.get_options(&search).await;
+  let Styles {
+    option_height,
+    option_width,
+    ..
+  } = config.get().styles;
   window
     .set_size(Size::Logical(LogicalSize {
-      width: 600f64,
-      height: 38f64 * (options.len() + 1) as f64,
+      width: option_width,
+      height: option_height * (options.len() + 1) as f64,
     }))
     .map_err(|e| {
       error!("Failed to resize window {}", e);
@@ -125,6 +131,7 @@ fn main() {
       return;
     }
   };
+  let global_cfg = config.clone();
 
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))
@@ -155,21 +162,26 @@ fn main() {
       }
       _ => {}
     })
-    .setup(|app| {
+    .setup(move |app| {
       #[cfg(target_os = "macos")]
       app.set_activation_policy(ActivationPolicy::Accessory);
 
-      // TODO code assumes input is 38px large, and each result is 18px with max of 10 results shown.
+      let Styles {
+        option_width,
+        option_height,
+        font_size,
+        ..
+      } = config.get().styles;
       let page = Page::Main(
         MainData::builder()
-          .style(("OPTION_HEIGHT".into(), 38.into()))
-          .style(("INPUT_HEIGHT".into(), 38.into()))
-          .style(("FONT_SIZE".into(), 16.into()))
+          .style(("OPTION_HEIGHT".into(), option_height.into()))
+          .style(("INPUT_HEIGHT".into(), option_height.into()))
+          .style(("FONT_SIZE".into(), font_size.into()))
           .build()?,
       );
 
       Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
-        .inner_size(600f64, 38f64)
+        .inner_size(option_width, option_height)
         .resizable(false)
         .always_on_top(true)
         .decorations(false)
@@ -198,8 +210,8 @@ fn main() {
         })?;
       Ok(())
     })
-    .manage(config.clone())
-    .manage(Launcher::new(config))
+    .manage(global_cfg.clone())
+    .manage(Launcher::new(global_cfg))
     .invoke_handler(tauri::generate_handler![
       close,
       get_config,

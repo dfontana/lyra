@@ -59,7 +59,7 @@ impl Launcher {
   fn options_to_receiver(&self) -> SkimItemReceiver {
     let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
 
-    let conf = self.config.config.lock().unwrap();
+    let conf = self.config.get();
     conf
       .bookmarks
       .iter()

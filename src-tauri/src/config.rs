@@ -1,9 +1,5 @@
-use std::{
-  collections::HashMap,
-  fs,
-  path::PathBuf,
-  sync::{Arc, Mutex},
-};
+use parking_lot::Mutex;
+use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -19,10 +15,29 @@ pub struct Config {
 #[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct InnerConfig {
+  pub styles: Styles,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub bookmarks: HashMap<String, Bookmark>,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub searchers: HashMap<String, Searcher>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct Styles {
+  pub option_width: f64,
+  pub option_height: f64,
+  pub font_size: usize,
+}
+
+impl Default for Styles {
+  fn default() -> Self {
+    Self {
+      option_width: 600f64,
+      option_height: 38f64,
+      font_size: 16,
+    }
+  }
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]
@@ -66,23 +81,26 @@ impl Config {
     Ok(config)
   }
 
+  pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {
+    self.config.lock()
+  }
+
   pub fn update_bookmarks(&self, bookmarks: Vec<Bookmark>) -> Result<(), anyhow::Error> {
-    (*self.config.lock().unwrap()).bookmarks =
-      bookmarks.iter().fold(HashMap::new(), |mut acc, v| {
-        acc.insert(v.label.clone(), v.clone());
-        acc
-      });
+    (*self.config.lock()).bookmarks = bookmarks.iter().fold(HashMap::new(), |mut acc, v| {
+      acc.insert(v.label.clone(), v.clone());
+      acc
+    });
     self.persist()
   }
 
   fn persist(&self) -> Result<(), anyhow::Error> {
-    let inner = self.config.lock().unwrap();
+    let inner = self.config.lock();
     fs::write(&self.file, toml::to_string(&*inner)?)?;
     Ok(())
   }
 
   pub fn get_url_from_label(&self, label: &str) -> String {
-    if let Some(bookmark) = (*self.config.lock().unwrap()).bookmarks.get(label) {
+    if let Some(bookmark) = (*self.config.lock()).bookmarks.get(label) {
       bookmark.link.to_owned()
     } else {
       "".to_owned()

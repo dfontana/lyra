@@ -15,8 +15,6 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### TODO
 
-- Fix assumption across front/backend that height is 38px high
-  - Can the window just be made flexible? Like min/max width/height?
 - Impl remaining functionality for searching bookmarks
 - Polish:
   - Launch UI
