@@ -1,10 +1,12 @@
 use parking_lot::Mutex;
 use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use serde::{Deserialize, Serialize};
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
+
+use crate::{launcher::SearchOption, template::Template};
 
 #[derive(Clone, Default)]
 pub struct Config {
@@ -52,7 +54,7 @@ pub struct Bookmark {
 pub struct Searcher {
   pub label: String,
   pub shortname: String,
-  pub template_link: String,
+  pub template: Template,
   pub arg_count: usize,
   pub icon: String,
 }
@@ -85,8 +87,16 @@ impl Config {
     self.config.lock()
   }
 
-  pub fn update_bookmarks(&self, bookmarks: Vec<Bookmark>) -> Result<(), anyhow::Error> {
-    (*self.config.lock()).bookmarks = bookmarks.iter().fold(HashMap::new(), |mut acc, v| {
+  pub fn update_bookmarks(&self, updated: Vec<Bookmark>) -> Result<(), anyhow::Error> {
+    (*self.config.lock()).bookmarks = updated.iter().fold(HashMap::new(), |mut acc, v| {
+      acc.insert(v.label.clone(), v.clone());
+      acc
+    });
+    self.persist()
+  }
+
+  pub fn update_searchers(&self, updated: Vec<Searcher>) -> Result<(), anyhow::Error> {
+    (*self.config.lock()).searchers = updated.iter().fold(HashMap::new(), |mut acc, v| {
       acc.insert(v.label.clone(), v.clone());
       acc
     });
@@ -99,11 +109,20 @@ impl Config {
     Ok(())
   }
 
-  pub fn get_url_from_label(&self, label: &str) -> String {
-    if let Some(bookmark) = (*self.config.lock()).bookmarks.get(label) {
-      bookmark.link.to_owned()
-    } else {
-      "".to_owned()
+  pub fn get_url(&self, opt: &SearchOption) -> Result<String, anyhow::Error> {
+    match opt {
+      SearchOption::Bookmark(data) => self
+        .get()
+        .bookmarks
+        .get(&data.label)
+        .map(|bk| bk.link.clone())
+        .ok_or(anyhow!("No such bookmark")),
+      SearchOption::Searcher(data) => self
+        .get()
+        .searchers
+        .get(&data.label)
+        .ok_or(anyhow!("No such searcher"))
+        .and_then(|sh| sh.template.hydrate(data)),
     }
   }
 }

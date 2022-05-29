@@ -9,45 +9,81 @@ pub struct Launcher {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SearchOption {
-  rank: i32,
-  label: String,
-  icon: String,
+pub struct BookmarkOption {
+  pub rank: i32,
+  pub label: String,
+  pub icon: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SearcherOption {
+  pub rank: i32,
+  pub label: String,
+  pub icon: String,
+  pub required_args: usize,
+  pub args: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum SearchOption {
+  Bookmark(BookmarkOption),
+  Searcher(SearcherOption),
 }
 
 impl SearchOption {
   fn with_rank(other: &SearchOption, rank: i32) -> SearchOption {
-    SearchOption {
-      rank,
-      label: other.label.clone(),
-      icon: other.icon.clone(),
+    match other {
+      SearchOption::Bookmark(data) => SearchOption::Bookmark(BookmarkOption {
+        rank,
+        label: data.label.clone(),
+        icon: data.icon.clone(),
+      }),
+      SearchOption::Searcher(data) => SearchOption::Searcher(SearcherOption {
+        rank,
+        label: data.label.clone(),
+        icon: data.icon.clone(),
+        required_args: data.required_args,
+        args: data.args.clone(),
+      }),
+    }
+  }
+
+  fn rank(&self) -> i32 {
+    match self {
+      SearchOption::Searcher(d) => d.rank,
+      SearchOption::Bookmark(d) => d.rank,
     }
   }
 }
 
 impl AsRef<str> for SearchOption {
   fn as_ref(&self) -> &str {
-    self.label.as_str()
+    match self {
+      SearchOption::Bookmark(d) => d.label.as_str(),
+      SearchOption::Searcher(d) => d.label.as_str(),
+    }
   }
 }
 
 impl Into<SearchOption> for &Bookmark {
   fn into(self) -> SearchOption {
-    SearchOption {
+    SearchOption::Bookmark(BookmarkOption {
       rank: 0,
       label: self.label.clone(),
       icon: self.icon.clone(),
-    }
+    })
   }
 }
 
 impl Into<SearchOption> for &Searcher {
   fn into(self) -> SearchOption {
-    SearchOption {
+    SearchOption::Searcher(SearcherOption {
       rank: 0,
       label: self.label.clone(),
       icon: self.icon.clone(),
-    }
+      required_args: self.arg_count,
+      args: Vec::new(),
+    })
   }
 }
 
@@ -94,12 +130,12 @@ impl Launcher {
         }
       })
       .collect();
-    options.sort_by(|a, b| a.rank.cmp(&b.rank));
+    options.sort_by(|a, b| a.rank().cmp(&b.rank()));
     options
   }
 
   pub fn launch(&self, scope: &ShellScope, selected: SearchOption) -> Result<(), anyhow::Error> {
-    let url = self.config.get_url_from_label(&selected.label);
+    let url = self.config.get_url(&selected)?;
     open(scope, url, None)?;
     Ok(())
   }

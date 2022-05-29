@@ -16,6 +16,9 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 #### TODO
 
 - Impl remaining functionality for searching bookmarks
+  - Template hydration
+  - Template parsing validation
+  - Frontend
 - Polish:
   - Launch UI
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/

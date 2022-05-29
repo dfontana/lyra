@@ -7,8 +7,9 @@ mod config;
 mod convert;
 mod launcher;
 mod page;
+mod template;
 
-use config::{Bookmark, Config, InnerConfig, Styles};
+use config::{Bookmark, Config, InnerConfig, Searcher, Styles};
 use launcher::{Launcher, SearchOption};
 use page::{MainData, Page, SettingsData};
 use tauri::{
@@ -38,10 +39,18 @@ fn get_config(config: tauri::State<Config>) -> InnerConfig {
 }
 
 #[tauri::command]
-fn save_bookmarks(config: tauri::State<Config>, bookmarks: Vec<Bookmark>) -> Result<(), String> {
-  config.update_bookmarks(bookmarks).map_err(|err| {
+fn save_bookmarks(config: tauri::State<Config>, updates: Vec<Bookmark>) -> Result<(), String> {
+  config.update_bookmarks(updates).map_err(|err| {
     error!("Failed to save bookmarks: {}", err);
     "Failed to save bookmarks".into()
+  })
+}
+
+#[tauri::command]
+fn save_searchers(config: tauri::State<Config>, updates: Vec<Searcher>) -> Result<(), String> {
+  config.update_searchers(updates).map_err(|err| {
+    error!("Failed to save searchers: {}", err);
+    "Failed to save searchers".into()
   })
 }
 
@@ -217,6 +226,7 @@ fn main() {
       get_config,
       image_data_url,
       save_bookmarks,
+      save_searchers,
       submit,
       search
     ])
