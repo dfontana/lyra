@@ -149,7 +149,8 @@ fn main() {
     .on_window_event(|event| match event.event() {
       WindowEvent::Focused(focused) => {
         if !focused && event.window().label() == Page::Main(MainData::default()).id() {
-          // Closer::close(&event.window());
+          #[cfg(not(debug_assertions))]
+          Closer::close(&event.window());
         }
       }
       _ => {}

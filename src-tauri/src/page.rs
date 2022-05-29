@@ -89,9 +89,10 @@ impl Page {
       Page::Main(data) => serde_json::to_value(data)?,
     };
     Ok(format!(
-      "window.__LYRA__={};window.__LYRA_PAGE__='{}'",
+      "window.__LYRA__={};window.__LYRA_PAGE__='{}';window.__LYRA_DEBUG__={}",
       data,
-      self.id()
+      self.id(),
+      cfg!(debug_assertions)
     ))
   }
 }
