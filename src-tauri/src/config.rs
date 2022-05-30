@@ -8,13 +8,13 @@ use tracing_subscriber::FmtSubscriber;
 
 use crate::{launcher::SearchOption, template::Template};
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Config {
   pub config: Arc<Mutex<InnerConfig>>,
   file: PathBuf,
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct InnerConfig {
   pub styles: Styles,
@@ -24,7 +24,7 @@ pub struct InnerConfig {
   pub searchers: HashMap<String, Searcher>,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Styles {
   pub option_width: f64,
@@ -42,7 +42,7 @@ impl Default for Styles {
   }
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Bookmark {
   pub label: String,
   pub shortname: String,
@@ -50,7 +50,7 @@ pub struct Bookmark {
   pub icon: String,
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Searcher {
   pub label: String,
   pub shortname: String,

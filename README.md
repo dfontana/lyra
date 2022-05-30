@@ -19,6 +19,11 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
   - Template hydration
   - Template parsing validation
   - Frontend
+- Impl Opening apps
+  - Union of "/System/Applications" and "/Applications"
+  - Anything that ends in ".app"
+  - Ideally we can add additional paths to check via settings
+  - Ideally paths are cached & updated if dir was touched? (timestamp changed?)
 - Polish:
   - Launch UI
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
@@ -37,10 +42,11 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 - [ ] App 'branding' (icons, styling)
 - [ ] Bookmarklets
-  - [ ] Config file to add new bookmarklets; either a URL or a parameterizable url
-  - [ ] Autocomplete
-  - [ ] Iconography support
-  - [ ] Opens in default browser
+  - [ ] Config file to add new bookmarklets; 
+  -  [x] either a URL 
+  -  [ ] or a parameterizable url
+  - [x] Iconography support
+  - [x] Opens in default browser
 
 #### MVP 2: App launcher (MacOS only)
 

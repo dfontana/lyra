@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use skim::prelude::*;
-use tauri::{api::shell::open, ShellScope};
 
 use crate::config::{Bookmark, Config, Searcher};
 
@@ -25,6 +24,7 @@ pub struct SearcherOption {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum SearchOption {
   Bookmark(BookmarkOption),
   Searcher(SearcherOption),
@@ -134,9 +134,9 @@ impl Launcher {
     options
   }
 
-  pub fn launch(&self, scope: &ShellScope, selected: SearchOption) -> Result<(), anyhow::Error> {
+  pub fn launch(&self, selected: SearchOption) -> Result<(), anyhow::Error> {
     let url = self.config.get_url(&selected)?;
-    open(scope, url, None)?;
+    open::that(url)?;
     Ok(())
   }
 }
