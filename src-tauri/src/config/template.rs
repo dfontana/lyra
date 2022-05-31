@@ -10,9 +10,25 @@ pub struct Template {
 }
 
 impl Template {
-  pub fn hydrate(&self, opt: &SearcherOption) -> Result<String, anyhow::Error> {
-    println!("{:?}", opt);
-    todo!("Impl, be wary of opt.args != opt.requiredArgs != template spaces")
+  pub fn hydrate(&self, opt: &SearcherOption) -> Result<String, TemplateError> {
+    if opt.args.len() != self.markers {
+      return Err(TemplateError::HydrateError(
+        "Not enough args provided to hydrate".into(),
+      ));
+    }
+    let mut hydration = self.val.clone();
+    for idx in 0..self.markers {
+      let marker = format!("{{{}}}", idx);
+      let arg = opt
+        .args
+        .get(idx)
+        .ok_or(TemplateError::HydrateError(format!(
+          "Missing arg {} for template",
+          idx
+        )))?;
+      hydration = hydration.replace(&marker, arg);
+    }
+    Ok(hydration)
   }
 }
 
@@ -116,11 +132,13 @@ impl TryFrom<String> for Template {
 #[derive(Debug, PartialEq)]
 pub enum TemplateError {
   InvalidFormat(String),
+  HydrateError(String),
 }
 impl Display for TemplateError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       TemplateError::InvalidFormat(reason) => f.write_str(reason),
+      TemplateError::HydrateError(reason) => f.write_str(reason),
     }
   }
 }
@@ -229,6 +247,76 @@ mod tests {
       Err(TemplateError::InvalidFormat(
         "Markers are not sequential from 0".into()
       ))
+    );
+  }
+
+  #[test]
+  fn hydrate_not_enough_args() {
+    let inp = SearcherOption {
+      icon: "".into(),
+      rank: 0,
+      label: "".into(),
+      required_args: 2,
+      args: vec!["dogs".into()],
+    };
+    assert_eq!(
+      Template::from_str("https://www.google.com?q={0}&r={1}")
+        .unwrap()
+        .hydrate(&inp),
+      Err(TemplateError::HydrateError(
+        "Not enough args provided to hydrate".into()
+      ))
+    );
+  }
+
+  #[test]
+  fn hydrate_one() {
+    let inp = SearcherOption {
+      icon: "".into(),
+      rank: 0,
+      label: "".into(),
+      required_args: 1,
+      args: vec!["dogs".into()],
+    };
+    assert_eq!(
+      Template::from_str("https://www.google.com?q={0}")
+        .unwrap()
+        .hydrate(&inp),
+      Ok("https://www.google.com?q=dogs".into())
+    );
+  }
+
+  #[test]
+  fn hydrate_in_order() {
+    let inp = SearcherOption {
+      icon: "".into(),
+      rank: 0,
+      label: "".into(),
+      required_args: 2,
+      args: vec!["dogs".into(), "cats".into()],
+    };
+    assert_eq!(
+      Template::from_str("https://www.google.com?q={0}&r={1}")
+        .unwrap()
+        .hydrate(&inp),
+      Ok("https://www.google.com?q=dogs&r=cats".into())
+    );
+  }
+
+  #[test]
+  fn hydrate_out_of_order() {
+    let inp = SearcherOption {
+      icon: "".into(),
+      rank: 0,
+      label: "".into(),
+      required_args: 2,
+      args: vec!["dogs".into(), "cats".into()],
+    };
+    assert_eq!(
+      Template::from_str("https://www.google.com?q={1}&r={0}")
+        .unwrap()
+        .hydrate(&inp),
+      Ok("https://www.google.com?q=cats&r=dogs".into())
     );
   }
 }

@@ -1,4 +1,6 @@
-use super::{Bookmark, Config, InnerConfig, Searcher};
+use std::str::FromStr;
+
+use super::{template::Template, Bookmark, Config, InnerConfig, Searcher};
 use tracing::error;
 
 #[tauri::command]
@@ -23,6 +25,9 @@ pub fn save_searchers(config: tauri::State<Config>, updates: Vec<Searcher>) -> R
 }
 
 #[tauri::command]
-pub fn validate_template() -> Result<(), String> {
-  todo!("Command to validate a given string as a template so frontend doesn't repeat logic");
+pub fn validate_template(input: String) -> Result<(), String> {
+  match Template::from_str(&input) {
+    Ok(_) => Ok(()),
+    Err(e) => Err(format!("{}", e)),
+  }
 }

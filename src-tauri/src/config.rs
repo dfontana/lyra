@@ -127,7 +127,7 @@ impl Config {
         .searchers
         .get(&data.label)
         .ok_or(anyhow!("No such searcher"))
-        .and_then(|sh| sh.template.hydrate(data)),
+        .and_then(|sh| sh.template.hydrate(data).map_err(|err| err.into())),
     }
   }
 }
