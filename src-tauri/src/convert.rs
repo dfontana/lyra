@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use reqwest::header::CONTENT_TYPE;
-use tracing::info;
+use tracing::{error, info};
 
-pub async fn convert_image(url: String) -> Result<String, anyhow::Error> {
+async fn convert_image(url: String) -> Result<String, anyhow::Error> {
   let resp = reqwest::get(url).await?;
   let ctype = match resp.headers().get(CONTENT_TYPE) {
     Some(v) => v.to_str()?,
@@ -16,4 +16,12 @@ pub async fn convert_image(url: String) -> Result<String, anyhow::Error> {
   let str = format!("data:{};base64,{}", ctype, base64::encode(&body));
   info!("Found: {}", str);
   Ok(str)
+}
+
+#[tauri::command]
+pub async fn image_data_url(url: String) -> Result<String, String> {
+  convert_image(url).await.map_err(|err| {
+    error!("Failed to parse image to data-url: {}", err);
+    "Could not convert image to data-url".into()
+  })
 }

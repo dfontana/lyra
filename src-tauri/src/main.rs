@@ -7,95 +7,15 @@ mod config;
 mod convert;
 mod launcher;
 mod page;
-mod template;
 
-use config::{Bookmark, Config, InnerConfig, Searcher, Styles};
-use launcher::{Launcher, SearchOption};
+use config::{Config, Styles};
+use launcher::Launcher;
 use page::{MainData, Page, SettingsData};
 use tauri::{
-  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, LogicalSize, Manager, Menu,
-  MenuEntry, MenuItem, Size, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window,
-  WindowEvent,
+  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
+  MenuItem, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window, WindowEvent,
 };
 use tracing::{error, info};
-
-#[tauri::command]
-fn close(window: tauri::Window) -> Result<(), String> {
-  closer::close(&window);
-  Ok(())
-}
-
-#[tauri::command]
-async fn image_data_url(url: String) -> Result<String, String> {
-  convert::convert_image(url).await.map_err(|err| {
-    error!("Failed to parse image to data-url: {}", err);
-    "Could not convert image to data-url".into()
-  })
-}
-
-#[tauri::command]
-fn get_config(config: tauri::State<Config>) -> InnerConfig {
-  config.get().clone()
-}
-
-#[tauri::command]
-fn save_bookmarks(config: tauri::State<Config>, updates: Vec<Bookmark>) -> Result<(), String> {
-  config.update_bookmarks(updates).map_err(|err| {
-    error!("Failed to save bookmarks: {}", err);
-    "Failed to save bookmarks".into()
-  })
-}
-
-#[tauri::command]
-fn save_searchers(config: tauri::State<Config>, updates: Vec<Searcher>) -> Result<(), String> {
-  config.update_searchers(updates).map_err(|err| {
-    error!("Failed to save searchers: {}", err);
-    "Failed to save searchers".into()
-  })
-}
-
-#[tauri::command]
-async fn search(
-  window: tauri::Window,
-  launcher: tauri::State<'_, Launcher>,
-  config: tauri::State<'_, Config>,
-  search: String,
-) -> Result<Vec<SearchOption>, String> {
-  let options = launcher.get_options(&search).await;
-  let Styles {
-    option_height,
-    option_width,
-    ..
-  } = config.get().styles;
-  window
-    .set_size(Size::Logical(LogicalSize {
-      width: option_width,
-      height: option_height * (options.len() + 1) as f64,
-    }))
-    .map_err(|e| {
-      error!("Failed to resize window {}", e);
-      "Failed to resize window"
-    })?;
-  Ok(options)
-}
-
-#[tauri::command]
-fn submit(
-  launcher: tauri::State<Launcher>,
-  selected: SearchOption,
-  window: tauri::Window,
-) -> Result<(), String> {
-  match launcher.launch(selected) {
-    Ok(()) => {
-      closer::close(&window);
-      Ok(())
-    }
-    Err(err) => {
-      info!("Failed to launch option {}", err);
-      Err("Failed to launch".into())
-    }
-  }
-}
 
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
   let page = Page::Settings(SettingsData::builder().build()?);
@@ -209,7 +129,7 @@ fn main() {
             .get_window(page.id())
             .expect("Framework should have built");
           let is_updated = match win.is_visible() {
-            Ok(true) => Ok(closer::close(&win)),
+            Ok(true) => Ok(closer::close_win(&win)),
             Ok(false) => win.set_focus(),
             Err(err) => Err(err),
           };
@@ -222,13 +142,14 @@ fn main() {
     .manage(global_cfg.clone())
     .manage(Launcher::new(global_cfg))
     .invoke_handler(tauri::generate_handler![
-      close,
-      get_config,
-      image_data_url,
-      save_bookmarks,
-      save_searchers,
-      submit,
-      search
+      closer::close,
+      convert::image_data_url,
+      config::get_config,
+      config::save_bookmarks,
+      config::save_searchers,
+      config::validate_template,
+      launcher::submit,
+      launcher::search
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

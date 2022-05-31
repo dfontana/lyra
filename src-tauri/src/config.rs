@@ -1,12 +1,17 @@
-use parking_lot::Mutex;
-use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
+mod commands;
+mod logs;
+mod template;
 
+pub use commands::*;
+pub use logs::init_logs;
+
+use crate::launcher::SearchOption;
 use anyhow::{anyhow, Context};
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
-
-use crate::{launcher::SearchOption, template::Template};
+use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
+use template::Template;
+use tracing::info;
 
 #[derive(Clone, Debug, Default)]
 pub struct Config {
@@ -127,33 +132,7 @@ impl Config {
   }
 }
 
-pub fn init_logs() -> Result<(), anyhow::Error> {
-  tracing::subscriber::with_default(
-    FmtSubscriber::builder()
-      .with_max_level(Level::INFO)
-      .finish(),
-    || -> Result<(), anyhow::Error> {
-      let logs_dir = init_home()?.join("logs");
-      if !logs_dir.exists() {
-        info!(
-          "Log dir missing, generating default at {}",
-          logs_dir.to_string_lossy()
-        );
-        fs::create_dir_all(&logs_dir)?;
-      }
-      tracing::subscriber::set_global_default(
-        FmtSubscriber::builder()
-          .with_max_level(Level::INFO)
-          .with_writer(tracing_appender::rolling::daily(logs_dir, "lyra.log"))
-          .finish(),
-      )
-      .expect("setting default subscriber failed");
-      Ok(())
-    },
-  )
-}
-
-fn init_home() -> Result<PathBuf, anyhow::Error> {
+pub fn init_home() -> Result<PathBuf, anyhow::Error> {
   let maybe_path = std::env::var("LYRA_HOME")
     .map(PathBuf::from)
     .or(

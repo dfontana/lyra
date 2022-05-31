@@ -10,7 +10,8 @@ pub struct Template {
 }
 
 impl Template {
-  pub fn hydrate(&self, _opt: &SearcherOption) -> Result<String, anyhow::Error> {
+  pub fn hydrate(&self, opt: &SearcherOption) -> Result<String, anyhow::Error> {
+    println!("{:?}", opt);
     todo!("Impl, be wary of opt.args != opt.requiredArgs != template spaces")
   }
 }
