@@ -6,6 +6,7 @@ use crate::config::{Bookmark, Searcher};
 pub struct BookmarkOption {
   pub rank: i32,
   pub label: String,
+  pub shortname: String,
   pub icon: String,
 }
 
@@ -13,6 +14,7 @@ pub struct BookmarkOption {
 pub struct SearcherOption {
   pub rank: i32,
   pub label: String,
+  pub shortname: String,
   pub icon: String,
   pub required_args: usize,
   pub args: Vec<String>,
@@ -31,11 +33,13 @@ impl SearchOption {
       SearchOption::Bookmark(data) => SearchOption::Bookmark(BookmarkOption {
         rank,
         label: data.label.clone(),
+        shortname: data.shortname.clone(),
         icon: data.icon.clone(),
       }),
       SearchOption::Searcher(data) => SearchOption::Searcher(SearcherOption {
         rank,
         label: data.label.clone(),
+        shortname: data.shortname.clone(),
         icon: data.icon.clone(),
         required_args: data.required_args,
         args: data.args.clone(),
@@ -54,8 +58,8 @@ impl SearchOption {
 impl AsRef<str> for SearchOption {
   fn as_ref(&self) -> &str {
     match self {
-      SearchOption::Bookmark(d) => d.label.as_str(),
-      SearchOption::Searcher(d) => d.label.as_str(),
+      SearchOption::Bookmark(d) => d.shortname.as_str(),
+      SearchOption::Searcher(d) => d.shortname.as_str(),
     }
   }
 }
@@ -65,6 +69,7 @@ impl Into<SearchOption> for &Bookmark {
     SearchOption::Bookmark(BookmarkOption {
       rank: 0,
       label: self.label.clone(),
+      shortname: self.shortname.clone(),
       icon: self.icon.clone(),
     })
   }
@@ -75,8 +80,9 @@ impl Into<SearchOption> for &Searcher {
     SearchOption::Searcher(SearcherOption {
       rank: 0,
       label: self.label.clone(),
+      shortname: self.shortname.clone(),
       icon: self.icon.clone(),
-      required_args: self.arg_count,
+      required_args: self.template.markers,
       args: Vec::new(),
     })
   }

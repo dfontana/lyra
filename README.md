@@ -16,9 +16,7 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 #### TODO
 
 - Impl remaining functionality for searching bookmarks
-  - Template hydration
-  - Template parsing validation
-  - Frontend
+  - Frontend: Finish app interaction, settings done
 - Impl Opening apps
   - Union of "/System/Applications" and "/Applications"
   - Anything that ends in ".app"
@@ -26,6 +24,7 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
   - Ideally paths are cached & updated if dir was touched? (timestamp changed?)
 - Polish:
   - Launch UI
+  - Setting page validation & cleanup
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
   - Optimize app size with:
     - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config

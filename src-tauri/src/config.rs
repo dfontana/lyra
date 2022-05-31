@@ -60,7 +60,6 @@ pub struct Searcher {
   pub label: String,
   pub shortname: String,
   pub template: Template,
-  pub arg_count: usize,
   pub icon: String,
 }
 

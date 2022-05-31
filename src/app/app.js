@@ -14,6 +14,8 @@ function App() {
   const [results, setResults] = useState([]);
   const [selection, resetNav] = useNavigation({
     results,
+    // TODO enter on searchers shouldn't submit until all args provided
+    //      until then it should lock in the current selected searcher, so args can be entered
     onSubmit: (selection) => invoke(SUBMIT, { selected: results[selection] }).catch(console.error),
     onClose: () => invoke(CLOSE).catch(console.error),
   });

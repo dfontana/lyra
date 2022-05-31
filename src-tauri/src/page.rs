@@ -65,6 +65,7 @@ impl SettingsDataBuilder {
     let mut map: HashMap<String, String> = HashMap::new();
     map.insert("IMAGE_TO_DATA".into(), "image_data_url".into());
     map.insert("SAVE_BOOKMARKS".into(), "save_bookmarks".into());
+    map.insert("SAVE_SEARCHERS".into(), "save_searchers".into());
     map.insert("GET_CONFIG".into(), "get_config".into());
     map.insert("VALIDATE_TEMPLATE".into(), "validate_template".into());
     map

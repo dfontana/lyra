@@ -6,7 +6,7 @@ use std::{fmt::Display, ops::Deref, str::FromStr};
 #[serde(try_from = "String", into = "String")]
 pub struct Template {
   val: String,
-  markers: usize,
+  pub markers: usize,
 }
 
 impl Template {
@@ -256,6 +256,7 @@ mod tests {
       icon: "".into(),
       rank: 0,
       label: "".into(),
+      shortname: "".into(),
       required_args: 2,
       args: vec!["dogs".into()],
     };
@@ -275,6 +276,7 @@ mod tests {
       icon: "".into(),
       rank: 0,
       label: "".into(),
+      shortname: "".into(),
       required_args: 1,
       args: vec!["dogs".into()],
     };
@@ -292,6 +294,7 @@ mod tests {
       icon: "".into(),
       rank: 0,
       label: "".into(),
+      shortname: "".into(),
       required_args: 2,
       args: vec!["dogs".into(), "cats".into()],
     };
@@ -309,6 +312,7 @@ mod tests {
       icon: "".into(),
       rank: 0,
       label: "".into(),
+      shortname: "".into(),
       required_args: 2,
       args: vec!["dogs".into(), "cats".into()],
     };
