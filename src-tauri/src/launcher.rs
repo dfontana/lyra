@@ -1,40 +1,34 @@
-use std::collections::HashMap;
+mod commands;
+mod searchoption;
 
-use serde::{Deserialize, Serialize};
+use crate::config::Config;
+pub use commands::*;
+pub use searchoption::{BookmarkOption, SearchOption, SearcherOption};
 use skim::prelude::*;
-use tauri::{api::shell::open, ShellScope};
-
-use crate::config::{Bookmark, Config};
 
 pub struct Launcher {
   config: Config,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct SearchOption {
-  rank: i32,
-  label: String,
-  icon: String,
-}
-
-impl AsRef<str> for Bookmark {
-  fn as_ref(&self) -> &str {
-    self.label.as_str()
-  }
-}
-
-fn options_to_receiver(items: &HashMap<String, Bookmark>) -> SkimItemReceiver {
-  let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
-  items.iter().for_each(|(_, bk)| {
-    let _ = tx_items.send(Arc::new(bk.to_owned()));
-  });
-  drop(tx_items); // indicates that all items have been sent
-  rx_items
-}
-
 impl Launcher {
   pub fn new(config: Config) -> Self {
     Launcher { config }
+  }
+
+  fn options_to_receiver(&self) -> SkimItemReceiver {
+    let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
+
+    let conf = self.config.get();
+    conf
+      .bookmarks
+      .iter()
+      .map(|(l, bk)| (l, bk.into()))
+      .chain(conf.searchers.iter().map(|(l, sh)| (l, sh.into())))
+      .for_each(|(_, se): (&String, SearchOption)| {
+        let _ = tx_items.send(Arc::new(se));
+      });
+    drop(tx_items); // indicates that all items have been sent
+    rx_items
   }
 
   pub async fn get_options(&self, search: &str) -> Vec<SearchOption> {
@@ -47,33 +41,25 @@ impl Launcher {
       .fuzzy_algorithm(FuzzyAlgorithm::SkimV2)
       .build()
       .create_engine_with_case(search, CaseMatching::Smart);
-    let receiver = options_to_receiver(&(*self.config.config.lock().unwrap()).bookmarks);
+    let receiver = self.options_to_receiver();
     let mut options: Vec<SearchOption> = receiver
       .iter()
       .filter_map(|bk| match fuzzy_engine.match_item(bk.clone()) {
         None => None,
-        Some(m) => Some((
-          m.rank.iter().sum(),
-          (*bk)
-            .as_any()
-            .downcast_ref::<Bookmark>()
-            .unwrap()
-            .to_owned(),
-        )),
-      })
-      .map(|(rank, bk)| SearchOption {
-        rank,
-        label: bk.label.clone(),
-        icon: bk.icon.clone(),
+        Some(m) => {
+          let rank = m.rank.iter().sum();
+          let opt = (*bk).as_any().downcast_ref::<SearchOption>().unwrap();
+          Some(SearchOption::with_rank(opt, rank))
+        }
       })
       .collect();
-    options.sort_by(|a, b| a.rank.cmp(&b.rank));
+    options.sort_by(|a, b| a.rank().cmp(&b.rank()));
     options
   }
 
-  pub fn launch(&self, scope: &ShellScope, selected: SearchOption) -> Result<(), anyhow::Error> {
-    let url = self.config.get_url_from_label(&selected.label);
-    open(scope, url, None)?;
+  pub fn launch(&self, selected: SearchOption) -> Result<(), anyhow::Error> {
+    let url = self.config.get_url(&selected)?;
+    open::that(url)?;
     Ok(())
   }
 }

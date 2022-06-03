@@ -1,3 +1,7 @@
 .cell {
   min-height: 0rem !important;
 }
+
+.iconBox:focus {
+  outline: auto !important;
+}

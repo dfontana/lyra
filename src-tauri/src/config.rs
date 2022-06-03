@@ -1,31 +1,53 @@
-use std::{
-  collections::HashMap,
-  fs,
-  path::PathBuf,
-  sync::{Arc, Mutex},
-};
+mod commands;
+mod logs;
+mod template;
 
-use anyhow::Context;
+pub use commands::*;
+pub use logs::init_logs;
+
+use crate::launcher::SearchOption;
+use anyhow::{anyhow, Context};
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
+use template::Template;
+use tracing::info;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Config {
   pub config: Arc<Mutex<InnerConfig>>,
   file: PathBuf,
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct InnerConfig {
+  pub styles: Styles,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub bookmarks: HashMap<String, Bookmark>,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub searchers: HashMap<String, Searcher>,
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
+pub struct Styles {
+  pub option_width: f64,
+  pub option_height: f64,
+  pub font_size: usize,
+}
+
+impl Default for Styles {
+  fn default() -> Self {
+    Self {
+      option_width: 600f64,
+      option_height: 38f64,
+      font_size: 16,
+    }
+  }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Bookmark {
   pub label: String,
   pub shortname: String,
@@ -33,13 +55,12 @@ pub struct Bookmark {
   pub icon: String,
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Searcher {
-  label: String,
-  shortname: String,
-  template_link: String,
-  arg_count: usize,
-  icon: String,
+  pub label: String,
+  pub shortname: String,
+  pub template: Template,
+  pub icon: String,
 }
 
 impl Config {
@@ -66,57 +87,51 @@ impl Config {
     Ok(config)
   }
 
-  pub fn update_bookmarks(&self, bookmarks: Vec<Bookmark>) -> Result<(), anyhow::Error> {
-    (*self.config.lock().unwrap()).bookmarks =
-      bookmarks.iter().fold(HashMap::new(), |mut acc, v| {
-        acc.insert(v.label.clone(), v.clone());
-        acc
-      });
+  pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {
+    self.config.lock()
+  }
+
+  pub fn update_bookmarks(&self, updated: Vec<Bookmark>) -> Result<(), anyhow::Error> {
+    (*self.config.lock()).bookmarks = updated.iter().fold(HashMap::new(), |mut acc, v| {
+      acc.insert(v.label.clone(), v.clone());
+      acc
+    });
+    self.persist()
+  }
+
+  pub fn update_searchers(&self, updated: Vec<Searcher>) -> Result<(), anyhow::Error> {
+    (*self.config.lock()).searchers = updated.iter().fold(HashMap::new(), |mut acc, v| {
+      acc.insert(v.label.clone(), v.clone());
+      acc
+    });
     self.persist()
   }
 
   fn persist(&self) -> Result<(), anyhow::Error> {
-    let inner = self.config.lock().unwrap();
+    let inner = self.config.lock();
     fs::write(&self.file, toml::to_string(&*inner)?)?;
     Ok(())
   }
 
-  pub fn get_url_from_label(&self, label: &str) -> String {
-    if let Some(bookmark) = (*self.config.lock().unwrap()).bookmarks.get(label) {
-      bookmark.link.to_owned()
-    } else {
-      "".to_owned()
+  pub fn get_url(&self, opt: &SearchOption) -> Result<String, anyhow::Error> {
+    match opt {
+      SearchOption::Bookmark(data) => self
+        .get()
+        .bookmarks
+        .get(&data.label)
+        .map(|bk| bk.link.clone())
+        .ok_or(anyhow!("No such bookmark")),
+      SearchOption::Searcher(data) => self
+        .get()
+        .searchers
+        .get(&data.label)
+        .ok_or(anyhow!("No such searcher"))
+        .and_then(|sh| sh.template.hydrate(data).map_err(|err| err.into())),
     }
   }
 }
 
-pub fn init_logs() -> Result<(), anyhow::Error> {
-  tracing::subscriber::with_default(
-    FmtSubscriber::builder()
-      .with_max_level(Level::INFO)
-      .finish(),
-    || -> Result<(), anyhow::Error> {
-      let logs_dir = init_home()?.join("logs");
-      if !logs_dir.exists() {
-        info!(
-          "Log dir missing, generating default at {}",
-          logs_dir.to_string_lossy()
-        );
-        fs::create_dir_all(&logs_dir)?;
-      }
-      tracing::subscriber::set_global_default(
-        FmtSubscriber::builder()
-          .with_max_level(Level::INFO)
-          .with_writer(tracing_appender::rolling::daily(logs_dir, "lyra.log"))
-          .finish(),
-      )
-      .expect("setting default subscriber failed");
-      Ok(())
-    },
-  )
-}
-
-fn init_home() -> Result<PathBuf, anyhow::Error> {
+pub fn init_home() -> Result<PathBuf, anyhow::Error> {
   let maybe_path = std::env::var("LYRA_HOME")
     .map(PathBuf::from)
     .or(

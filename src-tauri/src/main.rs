@@ -4,101 +4,18 @@
 )]
 mod closer;
 mod config;
+mod convert;
 mod launcher;
 mod page;
 
-use anyhow::anyhow;
-use closer::Closer;
-use config::{Bookmark, Config, InnerConfig};
-use launcher::{Launcher, SearchOption};
+use config::{Config, Styles};
+use launcher::Launcher;
 use page::{MainData, Page, SettingsData};
-use reqwest::header::CONTENT_TYPE;
 use tauri::{
-  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, LogicalSize, Manager, Menu,
-  MenuEntry, MenuItem, Size, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window,
-  WindowEvent,
+  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
+  MenuItem, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window, WindowEvent,
 };
 use tracing::{error, info};
-
-#[tauri::command]
-fn close(window: tauri::Window) -> Result<(), String> {
-  Closer::close(&window);
-  Ok(())
-}
-
-#[tauri::command]
-async fn image_data_url(url: String) -> Result<String, String> {
-  _convert_image(url).await.map_err(|err| {
-    error!("Failed to parse image to data-url: {}", err);
-    "Could not convert image to data-url".into()
-  })
-}
-
-async fn _convert_image(url: String) -> Result<String, anyhow::Error> {
-  let resp = reqwest::get(url).await?;
-  let ctype = match resp.headers().get(CONTENT_TYPE) {
-    Some(v) => v.to_str()?,
-    None => return Err(anyhow!("Unknown content type")),
-  };
-  let ctype = match ctype {
-    "image/svg+xml" | "image/png" | "image/vnd.microsoft.icon" | "image/jpeg" => ctype.to_owned(),
-    _ => return Err(anyhow!("Unsupported Content Type: {}", ctype)),
-  };
-  let body = resp.bytes().await?;
-  let str = format!("data:{};base64,{}", ctype, base64::encode(&body));
-  info!("Found: {}", str);
-  Ok(str)
-}
-
-#[tauri::command]
-fn get_config(config: tauri::State<Config>) -> InnerConfig {
-  (*config.config.lock().unwrap()).clone()
-}
-
-#[tauri::command]
-fn save_bookmarks(config: tauri::State<Config>, bookmarks: Vec<Bookmark>) -> Result<(), String> {
-  config.update_bookmarks(bookmarks).map_err(|err| {
-    error!("Failed to save bookmarks: {}", err);
-    "Failed to save bookmarks".into()
-  })
-}
-
-#[tauri::command]
-async fn search(
-  window: tauri::Window,
-  launcher: tauri::State<'_, Launcher>,
-  search: String,
-) -> Result<Vec<SearchOption>, String> {
-  let options = launcher.get_options(&search).await;
-  window
-    .set_size(Size::Logical(LogicalSize {
-      width: 600f64,
-      height: 38f64 * (options.len() + 1) as f64,
-    }))
-    .map_err(|e| {
-      error!("Failed to resize window {}", e);
-      "Failed to resize window"
-    })?;
-  Ok(options)
-}
-
-#[tauri::command]
-fn submit(
-  launcher: tauri::State<Launcher>,
-  selected: SearchOption,
-  window: tauri::Window,
-) -> Result<(), String> {
-  match launcher.launch(&window.app_handle().shell_scope(), selected) {
-    Ok(()) => {
-      Closer::close(&window);
-      Ok(())
-    }
-    Err(err) => {
-      info!("Failed to launch option {}", err);
-      Err("Failed to launch".into())
-    }
-  }
-}
 
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
   let page = Page::Settings(SettingsData::builder().build()?);
@@ -143,6 +60,7 @@ fn main() {
       return;
     }
   };
+  let global_cfg = config.clone();
 
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))
@@ -167,26 +85,32 @@ fn main() {
     .on_window_event(|event| match event.event() {
       WindowEvent::Focused(focused) => {
         if !focused && event.window().label() == Page::Main(MainData::default()).id() {
-          // Closer::close(&event.window());
+          #[cfg(not(debug_assertions))]
+          Closer::close(&event.window());
         }
       }
       _ => {}
     })
-    .setup(|app| {
+    .setup(move |app| {
       #[cfg(target_os = "macos")]
       app.set_activation_policy(ActivationPolicy::Accessory);
 
-      // TODO code assumes input is 38px large, and each result is 18px with max of 10 results shown.
+      let Styles {
+        option_width,
+        option_height,
+        font_size,
+        ..
+      } = config.get().styles;
       let page = Page::Main(
         MainData::builder()
-          .style(("OPTION_HEIGHT".into(), 38.into()))
-          .style(("INPUT_HEIGHT".into(), 38.into()))
-          .style(("FONT_SIZE".into(), 16.into()))
+          .style(("OPTION_HEIGHT".into(), option_height.into()))
+          .style(("INPUT_HEIGHT".into(), option_height.into()))
+          .style(("FONT_SIZE".into(), font_size.into()))
           .build()?,
       );
 
       Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
-        .inner_size(600f64, 38f64)
+        .inner_size(option_width, option_height)
         .resizable(false)
         .always_on_top(true)
         .decorations(false)
@@ -205,7 +129,7 @@ fn main() {
             .get_window(page.id())
             .expect("Framework should have built");
           let is_updated = match win.is_visible() {
-            Ok(true) => Ok(Closer::close(&win)),
+            Ok(true) => Ok(closer::close_win(&win)),
             Ok(false) => win.set_focus(),
             Err(err) => Err(err),
           };
@@ -215,15 +139,18 @@ fn main() {
         })?;
       Ok(())
     })
-    .manage(config.clone())
-    .manage(Launcher::new(config))
+    .manage(global_cfg.clone())
+    .manage(Launcher::new(global_cfg))
     .invoke_handler(tauri::generate_handler![
-      close,
-      get_config,
-      image_data_url,
-      save_bookmarks,
-      submit,
-      search
+      closer::close,
+      convert::image_data_url,
+      config::get_config,
+      config::save_bookmarks,
+      config::save_searchers,
+      config::validate_template,
+      launcher::submit,
+      launcher::search,
+      launcher::select_searcher
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
