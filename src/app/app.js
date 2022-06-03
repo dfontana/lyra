@@ -14,6 +14,10 @@ const isSearcherSelected = (results, selection, search) => {
   return item?.type === 'Searcher' && search.startsWith(item?.shortname) && search.includes(' ');
 };
 
+const isWebQuerySelected = (results, selection) => {
+  return results[selection]?.type === 'WebQuery';
+};
+
 const split = (str, sep, n) => {
   let split = str.split(sep);
   if (split.length <= n) return split;
@@ -30,8 +34,7 @@ function App() {
     onSubmit: (selection) => {
       let selected = { ...results[selection] };
 
-      const isSearcher = isSearcherSelected(results, selection, search);
-      if (isSearcher) {
+      if (isSearcherSelected(results, selection, search)) {
         const expectArgs = results[selection].required_args;
         const args = split(search, ' ', expectArgs + 1);
         console.log(args, expectArgs);
@@ -41,6 +44,8 @@ function App() {
         }
         // ready to search, add the args in
         selected.args = args.slice(1);
+      } else if (isWebQuerySelected(results, selection)) {
+        selected.query = search;
       }
       invoke(SUBMIT, { selected }).catch(console.error);
     },
@@ -108,9 +113,10 @@ function App() {
           fontSize: `${FONT_SIZE}px`,
         }}
       />
-      {results.map(({ label, icon }, idx) => (
+      {results.map(({ type, label, icon }, idx) => (
         <SearchResult
           key={label}
+          type={type}
           id={label}
           value={label}
           icon={icon}

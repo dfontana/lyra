@@ -146,6 +146,7 @@ fn main() {
       convert::image_data_url,
       config::get_config,
       config::save_bookmarks,
+      config::save_engine,
       config::save_searchers,
       config::validate_template,
       launcher::submit,

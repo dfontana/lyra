@@ -1,5 +1,6 @@
 import React from 'react';
 import BookmarkletManager from './bookmarkletmanager';
+import General from './general';
 import SearcherManager from './searchermanager';
 import useHydration from './useHydration';
 import { GeistProvider, CssBaseline, Page, Tabs, Loading } from '@geist-ui/core';
@@ -17,10 +18,14 @@ export default function Settings() {
           <Loading>Loading</Loading>
         ) : (
           <Tabs initialValue="1">
-            <Tabs.Item label="bookmarks" value="1">
+            <Tabs.Item label="general" value="1">
+              <General initialConfig={config} />
+            </Tabs.Item>
+
+            <Tabs.Item label="bookmarks" value="2">
               <BookmarkletManager initialConfig={config} />
             </Tabs.Item>
-            <Tabs.Item label="searchers" value="2">
+            <Tabs.Item label="searchers" value="3">
               <SearcherManager initialConfig={config} />
             </Tabs.Item>
           </Tabs>

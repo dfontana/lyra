@@ -6,6 +6,8 @@ pub use commands::*;
 pub use searchoption::{BookmarkOption, SearchOption, SearcherOption};
 use skim::prelude::*;
 
+use self::searchoption::Query;
+
 pub struct Launcher {
   config: Config,
 }
@@ -53,7 +55,8 @@ impl Launcher {
         }
       })
       .collect();
-    options.sort_by(|a, b| a.rank().cmp(&b.rank()));
+    options.push(SearchOption::WebQuery(Query::default()));
+    options.sort_by(|a, b| b.rank().cmp(&a.rank()));
     options
   }
 

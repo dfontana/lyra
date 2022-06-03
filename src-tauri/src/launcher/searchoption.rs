@@ -20,11 +20,19 @@ pub struct SearcherOption {
   pub args: Vec<String>,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Query {
+  pub rank: i32,
+  pub label: String,
+  pub query: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum SearchOption {
   Bookmark(BookmarkOption),
   Searcher(SearcherOption),
+  WebQuery(Query),
 }
 
 impl SearchOption {
@@ -44,6 +52,7 @@ impl SearchOption {
         required_args: data.required_args,
         args: data.args.clone(),
       }),
+      SearchOption::WebQuery(query) => SearchOption::WebQuery(query.clone()),
     }
   }
 
@@ -51,6 +60,7 @@ impl SearchOption {
     match self {
       SearchOption::Searcher(d) => d.rank,
       SearchOption::Bookmark(d) => d.rank,
+      SearchOption::WebQuery(d) => d.rank,
     }
   }
 }
@@ -60,6 +70,7 @@ impl AsRef<str> for SearchOption {
     match self {
       SearchOption::Bookmark(d) => d.shortname.as_str(),
       SearchOption::Searcher(d) => d.shortname.as_str(),
+      SearchOption::WebQuery(d) => d.label.as_str(),
     }
   }
 }
@@ -85,5 +96,15 @@ impl Into<SearchOption> for &Searcher {
       required_args: self.template.markers,
       args: Vec::new(),
     })
+  }
+}
+
+impl Default for Query {
+  fn default() -> Self {
+    Self {
+      rank: i32::MIN,
+      label: "Search the Web".into(),
+      query: "".into(),
+    }
   }
 }

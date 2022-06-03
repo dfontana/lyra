@@ -22,6 +22,7 @@ pub struct Config {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct InnerConfig {
+  pub default_web_engine: Option<Template>,
   pub styles: Styles,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub bookmarks: HashMap<String, Bookmark>,
@@ -99,6 +100,11 @@ impl Config {
     self.persist()
   }
 
+  pub fn update_engine(&self, updated: Template) -> Result<(), anyhow::Error> {
+    (*self.config.lock()).default_web_engine = Some(updated);
+    self.persist()
+  }
+
   pub fn update_searchers(&self, updated: Vec<Searcher>) -> Result<(), anyhow::Error> {
     (*self.config.lock()).searchers = updated.iter().fold(HashMap::new(), |mut acc, v| {
       acc.insert(v.label.clone(), v.clone());
@@ -126,7 +132,16 @@ impl Config {
         .searchers
         .get(&data.label)
         .ok_or(anyhow!("No such searcher"))
-        .and_then(|sh| sh.template.hydrate(data).map_err(|err| err.into())),
+        .and_then(|sh| sh.template.hydrate(&data.args).map_err(|err| err.into())),
+      SearchOption::WebQuery(query) => self
+        .get()
+        .default_web_engine
+        .as_ref()
+        .ok_or(anyhow!("No WebEngine configured for queries"))
+        .and_then(|tp| {
+          tp.hydrate(&vec![query.query.clone()])
+            .map_err(|err| err.into())
+        }),
     }
   }
 }

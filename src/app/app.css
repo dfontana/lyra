@@ -19,6 +19,7 @@ body {
   width: 100%;
   padding: 0px;
   border: 0px;
+  outline: none;
 }
 
 .searchResult {
@@ -29,7 +30,11 @@ body {
 }
 
 .searchResult-icon {
-  margin: 0 5px;
+  margin-left: 5px;
+}
+
+.searchResult-label {
+  margin-left: 5px;
 }
 
 .selected {
