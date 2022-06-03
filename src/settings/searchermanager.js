@@ -2,9 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { Button, Table, Tooltip, Avatar, Input, useToasts, Fieldset } from '@geist-ui/core';
 import { X } from '@geist-ui/icons';
 import { invoke } from '@tauri-apps/api/tauri';
-import debounce from './debounce';
+import TemplateInput from './templateinput';
 import './bookmarklets.css';
-const { IMAGE_TO_DATA, SAVE_SEARCHERS, VALIDATE_TEMPLATE } = window.__LYRA__.calls;
+const { IMAGE_TO_DATA, SAVE_SEARCHERS } = window.__LYRA__.calls;
 
 function newRow() {
   return {
@@ -67,44 +67,6 @@ function RenderRemoveButton(setData, rowIndex) {
   );
 }
 
-function TemplateInput(setLock, setData, rowData, rowIndex) {
-  const [valid, setValid] = useState(true);
-  const ref = React.useRef(null);
-  const validate_and_save = debounce(() => {
-    invoke(VALIDATE_TEMPLATE, { input: ref.current.value })
-      .then(() => {
-        setData((last) => {
-          return last.map((item, dataIndex) => {
-            if (dataIndex !== rowIndex) return item;
-            return {
-              ...item,
-              template: ref.current.value,
-            };
-          });
-        });
-      })
-      .then(() => {
-        setValid(true);
-        setLock(false);
-      })
-      .catch(() => {
-        setValid(false);
-        setLock(true);
-      });
-  }, 300);
-
-  return (
-    <Input
-      ref={ref}
-      type={valid ? '' : 'error'}
-      initialValue={rowData.template}
-      scale={0.5}
-      width="100%"
-      onChange={validate_and_save}
-    />
-  );
-}
-
 export default function SearcherManager({ initialConfig }) {
   const { setToast } = useToasts();
   const [data, setData] = useState(Object.values(initialConfig.searchers));
@@ -126,8 +88,21 @@ export default function SearcherManager({ initialConfig }) {
     };
     return <Input scale={0.5} width="100%" value={value} onChange={onChange} />;
   };
-  const renderTemplateInput = (_, row, idx) => TemplateInput(setLock, setData, row, idx);
-
+  const renderTemplateInput = (_, row, idx) =>
+    TemplateInput({
+      setLock,
+      setValue: (value) =>
+        setData((last) => {
+          return last.map((item, dataIndex) => {
+            if (dataIndex !== idx) return item;
+            return {
+              ...item,
+              template: value,
+            };
+          });
+        }),
+      initialValue: row.template,
+    });
   const addRow = useCallback(() => {
     setData((prev) => [...prev, newRow()]);
   }, [setData]);

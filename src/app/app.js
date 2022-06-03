@@ -41,6 +41,9 @@ function App() {
         }
         // ready to search, add the args in
         selected.args = args.slice(1);
+      } else if (results.length === 0 && search.trim().length > 0) {
+        // Nothing selected but there's a search, so search it
+        selected = { type: 'WebQuery', query: search };
       }
       invoke(SUBMIT, { selected }).catch(console.error);
     },

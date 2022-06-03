@@ -20,11 +20,17 @@ pub struct SearcherOption {
   pub args: Vec<String>,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Query {
+  pub query: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum SearchOption {
   Bookmark(BookmarkOption),
   Searcher(SearcherOption),
+  WebQuery(Query),
 }
 
 impl SearchOption {
@@ -44,6 +50,7 @@ impl SearchOption {
         required_args: data.required_args,
         args: data.args.clone(),
       }),
+      SearchOption::WebQuery(query) => SearchOption::WebQuery(query.clone()),
     }
   }
 
@@ -51,6 +58,7 @@ impl SearchOption {
     match self {
       SearchOption::Searcher(d) => d.rank,
       SearchOption::Bookmark(d) => d.rank,
+      SearchOption::WebQuery(_) => 0,
     }
   }
 }
@@ -60,6 +68,7 @@ impl AsRef<str> for SearchOption {
     match self {
       SearchOption::Bookmark(d) => d.shortname.as_str(),
       SearchOption::Searcher(d) => d.shortname.as_str(),
+      SearchOption::WebQuery(_) => "",
     }
   }
 }

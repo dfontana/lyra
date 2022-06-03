@@ -17,6 +17,14 @@ pub fn save_bookmarks(config: tauri::State<Config>, updates: Vec<Bookmark>) -> R
 }
 
 #[tauri::command]
+pub fn save_engine(config: tauri::State<Config>, updates: Template) -> Result<(), String> {
+  config.update_engine(updates).map_err(|err| {
+    error!("Failed to save web engine: {}", err);
+    "Failed to save web engine".into()
+  })
+}
+
+#[tauri::command]
 pub fn save_searchers(config: tauri::State<Config>, updates: Vec<Searcher>) -> Result<(), String> {
   config.update_searchers(updates).map_err(|err| {
     error!("Failed to save searchers: {}", err);
