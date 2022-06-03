@@ -15,7 +15,6 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### TODO
 
-- Impl default of no matches searching google
 - Impl Opening apps
   - Union of "/System/Applications" and "/Applications"
   - Anything that ends in ".app"

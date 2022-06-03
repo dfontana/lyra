@@ -4,12 +4,14 @@ import './app.css';
 
 const className = (s) => `searchResult ${s ? 'selected' : ''}`;
 
-function SearchResult({ value, icon, selected, ...rest }) {
+function SearchResult({ type, value, icon, selected, ...rest }) {
   return (
     <div className={className(selected)} {...rest}>
-      <span className="searchResult-icon">
-        <Avatar src={icon} alt="" />
-      </span>
+      {type !== 'WebQuery' && (
+        <span className="searchResult-icon">
+          <Avatar src={icon} alt="" />
+        </span>
+      )}
       <span className="searchResult-label">{value}</span>
     </div>
   );

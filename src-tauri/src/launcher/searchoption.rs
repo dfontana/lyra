@@ -22,6 +22,8 @@ pub struct SearcherOption {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Query {
+  pub rank: i32,
+  pub label: String,
   pub query: String,
 }
 
@@ -58,7 +60,7 @@ impl SearchOption {
     match self {
       SearchOption::Searcher(d) => d.rank,
       SearchOption::Bookmark(d) => d.rank,
-      SearchOption::WebQuery(_) => 0,
+      SearchOption::WebQuery(d) => d.rank,
     }
   }
 }
@@ -68,7 +70,7 @@ impl AsRef<str> for SearchOption {
     match self {
       SearchOption::Bookmark(d) => d.shortname.as_str(),
       SearchOption::Searcher(d) => d.shortname.as_str(),
-      SearchOption::WebQuery(_) => "",
+      SearchOption::WebQuery(d) => d.label.as_str(),
     }
   }
 }
@@ -94,5 +96,15 @@ impl Into<SearchOption> for &Searcher {
       required_args: self.template.markers,
       args: Vec::new(),
     })
+  }
+}
+
+impl Default for Query {
+  fn default() -> Self {
+    Self {
+      rank: i32::MIN,
+      label: "Search the Web".into(),
+      query: "".into(),
+    }
   }
 }
