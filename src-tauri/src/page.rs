@@ -28,6 +28,7 @@ impl MainDataBuilder {
   fn default_calls(&self) -> HashMap<String, String> {
     let mut map: HashMap<String, String> = HashMap::new();
     map.insert("SEARCH".into(), "search".into());
+    map.insert("SELECT_SEARCH".into(), "select_searcher".into());
     map.insert("SUBMIT".into(), "submit".into());
     map.insert("CLOSE".into(), "close".into());
     map

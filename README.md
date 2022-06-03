@@ -15,21 +15,21 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### TODO
 
-- Impl remaining functionality for searching bookmarks
-  - Frontend: Finish app interaction, settings done
 - Impl Opening apps
   - Union of "/System/Applications" and "/Applications"
   - Anything that ends in ".app"
   - Ideally we can add additional paths to check via settings
   - Ideally paths are cached & updated if dir was touched? (timestamp changed?)
 - Polish:
-  - Launch UI
+  - Fix log rotation (need to clear old logs out from > N days ago)
   - Setting page validation & cleanup
+    - No spaces in shortnames for searchers, need links/labels/icons, templates validity etc
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
   - Optimize app size with:
     - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
     - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
-  - Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
+  - Launch UI
+- Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
 
 #### React
 

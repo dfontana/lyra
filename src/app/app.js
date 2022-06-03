@@ -6,17 +6,44 @@ import SearchResult from './searchResult';
 import './app.css';
 
 const { RESET } = window.__LYRA__.events;
-const { SEARCH, SUBMIT, CLOSE } = window.__LYRA__.calls;
+const { SEARCH, SELECT_SEARCH, SUBMIT, CLOSE } = window.__LYRA__.calls;
 const { INPUT_HEIGHT, OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
+
+const isSearcherSelected = (results, selection, search) => {
+  const item = results[selection];
+  return item?.type === 'Searcher' && search.startsWith(item?.shortname) && search.includes(' ');
+};
+
+const split = (str, sep, n) => {
+  let split = str.split(sep);
+  if (split.length <= n) return split;
+  var out = split.slice(0, n - 1);
+  out.push(split.slice(n - 1).join(sep));
+  return out;
+};
 
 function App() {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [selection, resetNav] = useNavigation({
     results,
-    // TODO enter on searchers shouldn't submit until all args provided
-    //      until then it should lock in the current selected searcher, so args can be entered
-    onSubmit: (selection) => invoke(SUBMIT, { selected: results[selection] }).catch(console.error),
+    onSubmit: (selection) => {
+      let selected = { ...results[selection] };
+
+      const isSearcher = isSearcherSelected(results, selection, search);
+      if (isSearcher) {
+        const expectArgs = results[selection].required_args;
+        const args = split(search, ' ', expectArgs + 1);
+        console.log(args, expectArgs);
+        if (args.length - 1 !== expectArgs) {
+          // Not yet ready to search need more args
+          return;
+        }
+        // ready to search, add the args in
+        selected.args = args.slice(1);
+      }
+      invoke(SUBMIT, { selected }).catch(console.error);
+    },
     onClose: () => invoke(CLOSE).catch(console.error),
   });
 
@@ -36,10 +63,24 @@ function App() {
     };
   }, [setSearch, setResults, resetNav]);
 
+  useEffect(() => {
+    if (results.length > 1 && isSearcherSelected(results, selection, search)) {
+      // Clear results to only be the selected item
+      setResults(results.filter((_, i) => i === selection));
+      resetNav();
+      invoke(SELECT_SEARCH).catch(console.error);
+      return;
+    }
+  }, [selection, results, search, resetNav, setResults]);
+
   const onChange = useCallback((e) => setSearch(e.target.value), [setSearch]);
   const onMouseDown = useCallback((e) => e.preventDefault(), []);
   const triggerSearch = useCallback(
     ({ key }) => {
+      if (isSearcherSelected(results, selection, search)) {
+        // Do not trigger a search when a searcher is selected and a space has been entered
+        return;
+      }
       switch (key) {
         case 'Enter':
         case 'ArrowDown':
@@ -49,7 +90,7 @@ function App() {
           invoke(SEARCH, { search }).then(setResults).catch(console.error);
       }
     },
-    [search]
+    [search, selection, results]
   );
 
   return (

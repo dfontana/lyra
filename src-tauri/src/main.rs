@@ -149,7 +149,8 @@ fn main() {
       config::save_searchers,
       config::validate_template,
       launcher::submit,
-      launcher::search
+      launcher::search,
+      launcher::select_searcher
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
