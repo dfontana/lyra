@@ -6,10 +6,12 @@ mod closer;
 mod config;
 mod convert;
 mod launcher;
+mod lookup;
 mod page;
 
 use config::{Config, Styles};
 use launcher::Launcher;
+use lookup::applookup::AppLookup;
 use page::{MainData, Page, SettingsData};
 use tauri::{
   ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
@@ -61,6 +63,7 @@ fn main() {
     }
   };
   let global_cfg = config.clone();
+  let apps = AppLookup::new(global_cfg.clone());
 
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))
@@ -140,7 +143,7 @@ fn main() {
       Ok(())
     })
     .manage(global_cfg.clone())
-    .manage(Launcher::new(global_cfg))
+    .manage(Launcher::new(global_cfg, apps))
     .invoke_handler(tauri::generate_handler![
       closer::close,
       convert::image_data_url,

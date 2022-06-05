@@ -16,10 +16,11 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 #### TODO
 
 - Impl Opening apps
-  - Union of "/System/Applications" and "/Applications"
-  - Anything that ends in ".app"
+  - Launch app given path
   - Ideally we can add additional paths to check via settings
   - Ideally paths are cached & updated if dir was touched? (timestamp changed?)
+  - Search for apps within 1 folder deep (but don't look inside .app, etc). Globbing may not work since it wouldn't be efficient
+  - Nice to have: Pull application icon (.app will need .icns support; exe / linux unclear)
 - Polish:
   - Fix log rotation (need to clear old logs out from > N days ago)
   - Setting page validation & cleanup

@@ -1,7 +1,7 @@
 mod commands;
 mod searchoption;
 
-use crate::config::Config;
+use crate::{config::Config, lookup::applookup::AppLookup};
 pub use commands::*;
 pub use searchoption::{BookmarkOption, SearchOption, SearcherOption};
 use skim::prelude::*;
@@ -10,23 +10,27 @@ use self::searchoption::Query;
 
 pub struct Launcher {
   config: Config,
+  apps: AppLookup,
 }
 
 impl Launcher {
-  pub fn new(config: Config) -> Self {
-    Launcher { config }
+  pub fn new(config: Config, apps: AppLookup) -> Self {
+    Launcher { config, apps }
   }
 
   fn options_to_receiver(&self) -> SkimItemReceiver {
     let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
 
+    for item in self.apps.iter() {
+      println!("{:?}", item);
+    }
     let conf = self.config.get();
     conf
       .bookmarks
       .iter()
-      .map(|(l, bk)| (l, bk.into()))
-      .chain(conf.searchers.iter().map(|(l, sh)| (l, sh.into())))
-      .for_each(|(_, se): (&String, SearchOption)| {
+      .map(|(_, bk)| bk.into())
+      .chain(conf.searchers.iter().map(|(_, sh)| sh.into()))
+      .for_each(|se: SearchOption| {
         let _ = tx_items.send(Arc::new(se));
       });
     drop(tx_items); // indicates that all items have been sent

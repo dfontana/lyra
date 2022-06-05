@@ -23,6 +23,8 @@ pub struct Config {
 #[serde(default)]
 pub struct InnerConfig {
   pub default_web_engine: Option<Template>,
+  pub app_paths: Vec<PathBuf>,
+  pub app_extension: String,
   pub styles: Styles,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub bookmarks: HashMap<String, Bookmark>,
@@ -121,6 +123,7 @@ impl Config {
 
   pub fn get_url(&self, opt: &SearchOption) -> Result<String, anyhow::Error> {
     match opt {
+      SearchOption::App(data) => Ok(data.path.clone()),
       SearchOption::Bookmark(data) => self
         .get()
         .bookmarks
