@@ -1,15 +1,18 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use super::{template::Template, Bookmark, Config, InnerConfig, Searcher};
 use tracing::error;
 
 #[tauri::command]
-pub fn get_config(config: tauri::State<Config>) -> InnerConfig {
+pub fn get_config(config: tauri::State<Arc<Config>>) -> InnerConfig {
   config.get().clone()
 }
 
 #[tauri::command]
-pub fn save_bookmarks(config: tauri::State<Config>, updates: Vec<Bookmark>) -> Result<(), String> {
+pub fn save_bookmarks(
+  config: tauri::State<Arc<Config>>,
+  updates: Vec<Bookmark>,
+) -> Result<(), String> {
   config.update_bookmarks(updates).map_err(|err| {
     error!("Failed to save bookmarks: {}", err);
     "Failed to save bookmarks".into()
@@ -17,7 +20,7 @@ pub fn save_bookmarks(config: tauri::State<Config>, updates: Vec<Bookmark>) -> R
 }
 
 #[tauri::command]
-pub fn save_engine(config: tauri::State<Config>, updates: Template) -> Result<(), String> {
+pub fn save_engine(config: tauri::State<Arc<Config>>, updates: Template) -> Result<(), String> {
   config.update_engine(updates).map_err(|err| {
     error!("Failed to save web engine: {}", err);
     "Failed to save web engine".into()
@@ -25,7 +28,10 @@ pub fn save_engine(config: tauri::State<Config>, updates: Template) -> Result<()
 }
 
 #[tauri::command]
-pub fn save_searchers(config: tauri::State<Config>, updates: Vec<Searcher>) -> Result<(), String> {
+pub fn save_searchers(
+  config: tauri::State<Arc<Config>>,
+  updates: Vec<Searcher>,
+) -> Result<(), String> {
   config.update_searchers(updates).map_err(|err| {
     error!("Failed to save searchers: {}", err);
     "Failed to save searchers".into()

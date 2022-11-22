@@ -34,6 +34,7 @@ pub struct Query {
 pub struct AppOption {
   pub rank: i32,
   pub label: String,
+  pub icon: String,
   pub path: String,
 }
 
@@ -53,6 +54,7 @@ impl SearchOption {
         rank,
         label: data.label.clone(),
         path: data.path.clone(),
+        icon: data.icon.clone(),
       }),
       SearchOption::Bookmark(data) => SearchOption::Bookmark(BookmarkOption {
         rank,
@@ -119,11 +121,11 @@ impl Into<SearchOption> for &Searcher {
 
 impl Into<SearchOption> for App {
   fn into(self) -> SearchOption {
-    println!("{:?}", self);
     SearchOption::App(AppOption {
       rank: 0,
       label: self.label.clone(),
       path: self.path.to_string_lossy().to_string(),
+      icon: self.icon.clone(),
     })
   }
 }

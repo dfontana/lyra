@@ -9,6 +9,8 @@ mod launcher;
 mod lookup;
 mod page;
 
+use std::sync::Arc;
+
 use config::{Config, Styles};
 use launcher::Launcher;
 use lookup::applookup::AppLookup;
@@ -21,7 +23,7 @@ use tracing::{error, info};
 
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
   let page = Page::Settings(SettingsData::builder().build()?);
-  if let Some(win) = app.get_window(&page.id()) {
+  if let Some(win) = app.get_window(page.id()) {
     win.show()?;
     win.set_focus()?;
     return Ok(());
@@ -56,14 +58,14 @@ fn main() {
   }
 
   let config = match Config::get_or_init_config() {
-    Ok(c) => c,
+    Ok(c) => Arc::new(c),
     Err(err) => {
       info!("Failed to initialize config: {}", err);
       return;
     }
   };
   let global_cfg = config.clone();
-  let apps = AppLookup::new(global_cfg.clone());
+  let apps = AppLookup::new(config.clone());
 
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))
@@ -103,7 +105,7 @@ fn main() {
         option_height,
         font_size,
         ..
-      } = config.get().styles;
+      } = global_cfg.get().styles;
       let page = Page::Main(
         MainData::builder()
           .style(("OPTION_HEIGHT".into(), option_height.into()))
@@ -142,8 +144,8 @@ fn main() {
         })?;
       Ok(())
     })
-    .manage(global_cfg.clone())
-    .manage(Launcher::new(global_cfg, apps))
+    .manage(config.clone())
+    .manage(Launcher::new(config, apps))
     .invoke_handler(tauri::generate_handler![
       closer::close,
       convert::image_data_url,

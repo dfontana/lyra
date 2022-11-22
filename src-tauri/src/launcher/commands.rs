@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use tauri::{LogicalSize, Size};
 use tracing::{error, info};
 
@@ -11,7 +13,7 @@ use super::{Launcher, SearchOption};
 fn resize(
   height: usize,
   window: tauri::Window,
-  config: tauri::State<'_, Config>,
+  config: tauri::State<'_, Arc<Config>>,
 ) -> Result<(), String> {
   let Styles {
     option_height,
@@ -33,7 +35,7 @@ fn resize(
 pub async fn search(
   window: tauri::Window,
   launcher: tauri::State<'_, Launcher>,
-  config: tauri::State<'_, Config>,
+  config: tauri::State<'_, Arc<Config>>,
   search: String,
 ) -> Result<Vec<SearchOption>, String> {
   let options = launcher.get_options(&search).await;
@@ -43,7 +45,7 @@ pub async fn search(
 
 #[tauri::command]
 pub fn select_searcher(
-  config: tauri::State<'_, Config>,
+  config: tauri::State<'_, Arc<Config>>,
   window: tauri::Window,
 ) -> Result<(), String> {
   resize(2, window, config)

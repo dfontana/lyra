@@ -1,25 +1,32 @@
-use crate::config::Config;
-use glob::glob;
-use std::path::PathBuf;
+use crate::{config::Config, convert};
+use glob::{glob};
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
+
 
 pub struct AppLookup {
-  config: Config,
+  config: Arc<Config>,
 }
 
 #[derive(Debug)]
 pub struct App {
   pub label: String,
+  pub icon: String,
   pub path: PathBuf,
 }
 
-impl From<PathBuf> for App {
-  fn from(p: PathBuf) -> Self {
+impl App {
+  fn from(p: PathBuf, suffix: &str, icon: String) -> Self {
     App {
       label: p
         .file_name()
         .expect("Glob returned non-file")
         .to_string_lossy()
+        .trim_end_matches(suffix)
         .to_string(),
+      icon,
       path: p,
     }
   }
@@ -35,7 +42,7 @@ pub struct AppLookupIter {
 }
 
 impl AppLookup {
-  pub fn new(config: Config) -> Self {
+  pub fn new(config: Arc<Config>) -> Self {
     AppLookup { config }
   }
 
@@ -50,8 +57,8 @@ impl AppLookup {
 }
 
 impl AppLookupIter {
-  fn to_glob(&mut self, p: &PathBuf) -> String {
-    format!("{}/*.{}", p.display(), self.extension)
+  fn to_glob(&mut self, p: &Path) -> String {
+    format!("{}/*{}", p.display(), self.extension)
   }
 }
 
@@ -74,7 +81,10 @@ impl Iterator for AppLookupIter {
           match next {
             // Skip path read errors
             Err(_) => self.next(),
-            Ok(item) => Some(App::from(item)),
+            Ok(item) => {
+              let icon = convert::to_icns(&item).unwrap_or_default();
+              Some(App::from(item, &self.extension, icon))
+            }
           }
         } else {
           self.next()

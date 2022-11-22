@@ -15,13 +15,9 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### TODO
 
-- Impl Opening apps
-  - Launch app given path
-  - Ideally we can add additional paths to check via settings
-  - Ideally paths are cached & updated if dir was touched? (timestamp changed?)
-  - Search for apps within 1 folder deep (but don't look inside .app, etc). Globbing may not work since it wouldn't be efficient
-  - Nice to have: Pull application icon (.app will need .icns support; exe / linux unclear)
 - Polish:
+  - Cache for `.icns` files & init on boot
+  - Fix all the clippy warns
   - Fix log rotation (need to clear old logs out from > N days ago)
   - Setting page validation & cleanup
     - No spaces in shortnames for searchers, need links/labels/icons, templates validity etc
@@ -30,7 +26,6 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
     - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
     - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
   - Launch UI
-- Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
 
 #### React
 
@@ -38,35 +33,34 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 ### Roadmap
 
-#### MVP 1: Bookmarks (MacOS only)
+#### MVP 1: Bookmarks & App Launcher (MacOS only)
 
 - [ ] App 'branding' (icons, styling)
-- [ ] Bookmarklets
-  - [ ] Config file to add new bookmarklets; 
+- [x] Bookmarklets
+  - [x] Config file to add new bookmarklets; 
   -  [x] either a URL 
-  -  [ ] or a parameterizable url
+  -  [x] or a parameterizable url
   - [x] Iconography support
   - [x] Opens in default browser
+- [x] App Launcher
+  - [x] Scans list of directories one level deep for `.app`
+  - [x] Loads `.icns` files from plist
+  - [x] Opens apps
+- [ ] Settings UI
+  - [x] Can add Bookmarks
+  - [ ] Can configure which `app_paths` & `app_extensions` 
 
-#### MVP 2: App launcher (MacOS only)
-
-- [ ] fzf on app folder?
-  - [ ] Only show results for platform specific file type (exe, app)
-
-#### MVP 3: Windows / Linux Support
+#### MVP 2: Windows / Linux Support
 
 - [ ] Windows works
+  - App launcher can find exes
+  - AppIcon support
 - [ ] Linux works
+  - App launcher can find... what now? .Desktop files?
+  - Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
+  - AppIcon support
 
-#### MVP 4: Configuration Window
-
-- [ ] Configuration window from tray menu to alter the config file
-  - [ ] Paths/Extensions for application search
-  - [ ] Bookmarklet management - name, (templatable) link, icon
-  - [ ] Command to run when opening application
-  - [ ] KeyBindings: open/hide/up/down/confirm
-
-#### MVP 5: File opener
+#### MVP 3: File opener
 
 - [ ] File launcher/finder (fzf/rg?)
   - [ ] Ability to search files and present top N options
@@ -75,7 +69,9 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### Bonus:
 
-- [ ] Styling
+- [ ] Configuration Styling
   - [ ] Window Size, location
   - [ ] Colors (theming)
   - [ ] Font sizes
+- [ ] Configuration KeyBindings: open/hide/up/down/confirm
+- `Assets.car` support on MacOS

@@ -1,7 +1,12 @@
 mod commands;
 mod searchoption;
 
-use crate::{config::Config, lookup::applookup::AppLookup};
+use std::cmp::Reverse;
+
+use crate::{
+  config::Config,
+  lookup::applookup::{App, AppLookup},
+};
 pub use commands::*;
 pub use searchoption::{BookmarkOption, SearchOption, SearcherOption};
 use skim::prelude::*;
@@ -9,27 +14,24 @@ use skim::prelude::*;
 use self::searchoption::Query;
 
 pub struct Launcher {
-  config: Config,
+  config: Arc<Config>,
   apps: AppLookup,
 }
 
 impl Launcher {
-  pub fn new(config: Config, apps: AppLookup) -> Self {
+  pub fn new(config: Arc<Config>, apps: AppLookup) -> Self {
     Launcher { config, apps }
   }
 
   fn options_to_receiver(&self) -> SkimItemReceiver {
     let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
-
-    for item in self.apps.iter() {
-      println!("{:?}", item);
-    }
     let conf = self.config.get();
     conf
       .bookmarks
       .iter()
       .map(|(_, bk)| bk.into())
       .chain(conf.searchers.iter().map(|(_, sh)| sh.into()))
+      .chain(self.apps.iter().map(App::into))
       .for_each(|se: SearchOption| {
         let _ = tx_items.send(Arc::new(se));
       });
@@ -60,7 +62,7 @@ impl Launcher {
       })
       .collect();
     options.push(SearchOption::WebQuery(Query::default()));
-    options.sort_by(|a, b| b.rank().cmp(&a.rank()));
+    options.sort_by_key(|r| Reverse(r.rank()));
     options
   }
 

@@ -7,15 +7,15 @@ pub use logs::init_logs;
 
 use crate::launcher::SearchOption;
 use anyhow::{anyhow, Context};
-use parking_lot::Mutex;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fs, ops::Deref, path::PathBuf};
 use template::Template;
 use tracing::info;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Config {
-  pub config: Arc<Mutex<InnerConfig>>,
+  pub config: RwLock<InnerConfig>,
   file: PathBuf,
 }
 
@@ -75,14 +75,16 @@ impl Config {
         "Config missing, generating default at {}",
         conf_file.to_string_lossy()
       );
-      let mut config = Config::default();
-      config.file = conf_file;
+      let config = Config {
+        file: conf_file,
+        ..Config::default()
+      };
       config.persist()?;
       config
     } else {
       let inner: InnerConfig = toml::from_str(&fs::read_to_string(&conf_file)?)?;
       Config {
-        config: Arc::new(Mutex::new(inner)),
+        config: RwLock::new(inner),
         file: conf_file,
       }
     };
@@ -91,11 +93,11 @@ impl Config {
   }
 
   pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {
-    self.config.lock()
+    self.config.read()
   }
 
   pub fn update_bookmarks(&self, updated: Vec<Bookmark>) -> Result<(), anyhow::Error> {
-    (*self.config.lock()).bookmarks = updated.iter().fold(HashMap::new(), |mut acc, v| {
+    (*self.config.write()).bookmarks = updated.iter().fold(HashMap::new(), |mut acc, v| {
       acc.insert(v.label.clone(), v.clone());
       acc
     });
@@ -103,12 +105,12 @@ impl Config {
   }
 
   pub fn update_engine(&self, updated: Template) -> Result<(), anyhow::Error> {
-    (*self.config.lock()).default_web_engine = Some(updated);
+    (*self.config.write()).default_web_engine = Some(updated);
     self.persist()
   }
 
   pub fn update_searchers(&self, updated: Vec<Searcher>) -> Result<(), anyhow::Error> {
-    (*self.config.lock()).searchers = updated.iter().fold(HashMap::new(), |mut acc, v| {
+    (*self.config.write()).searchers = updated.iter().fold(HashMap::new(), |mut acc, v| {
       acc.insert(v.label.clone(), v.clone());
       acc
     });
@@ -116,7 +118,7 @@ impl Config {
   }
 
   fn persist(&self) -> Result<(), anyhow::Error> {
-    let inner = self.config.lock();
+    let inner = self.config.read();
     fs::write(&self.file, toml::to_string(&*inner)?)?;
     Ok(())
   }
