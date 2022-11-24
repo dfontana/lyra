@@ -19,9 +19,8 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
   - Setting page validation & cleanup
     - No spaces in shortnames for searchers, need links/labels/icons, templates validity etc
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
-  - Optimize app size with:
-    - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
-    - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
+  - https://tauri.app/v1/guides/features/splashscreen
+    - While rust is building app icon cache, for exmaple
 
 #### React
 
