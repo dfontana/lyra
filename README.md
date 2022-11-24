@@ -16,16 +16,7 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 #### TODO
 
 - Polish:
-  - Setting page validation & cleanup
-    - No spaces in shortnames for searchers, need links/labels/icons, templates validity etc
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
-  - Optimize app size with:
-    - https://tauri.studio/v1/guides/building/app-size#5-allowlist-config
-    - https://tauri.studio/v1/guides/building/app-size#6-rust-build-time-optimizations
-
-#### React
-
-- Uses css-modules https://github.com/css-modules/css-modules
 
 ### Roadmap
 
@@ -59,3 +50,5 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
   - [ ] Font sizes
 - [ ] Configuration KeyBindings: open/hide/up/down/confirm
 - `Assets.car` support on MacOS
+- Setting page validation & cleanup
+  - No spaces in shortnames for searchers, need links/labels/icons, templates validity etc

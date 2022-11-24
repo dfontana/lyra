@@ -1,18 +1,25 @@
 [package]
 name = "app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Lyra"
+authors = ["Dylan Fontana"]
 license = ""
 repository = ""
 default-run = "app"
 edition = "2021"
-rust-version = "1.57"
+rust-version = "1.65"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.0.0-rc.8", features = [] }
+tauri-build = { version = "1.2.1", features = [] }
+
+[profile.release]
+panic = "abort" # Strip expensive panic clean-up logic
+codegen-units = 1 # Compile crates one after another so the compiler can optimize better
+lto = true # Enables link to optimizations
+opt-level = "s" # Optimize for binary size
+strip = true
 
 [dependencies]
 anyhow = "1.0.57"
@@ -29,7 +36,7 @@ reqwest = "0.11.10"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 skim = "0.10.2"
-tauri = { version = "1.0.0-rc.9", features = ["api-all", "system-tray"] }
+tauri = { version = "1.2.1", features = ["global-shortcut-all", "system-tray"] }
 toml = "0.5.9"
 tracing = "0.1.34"
 tracing-appender = "0.2.2"
@@ -42,9 +49,3 @@ default = [ "custom-protocol" ]
 # this feature is used used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
-
-
-
-
-
-

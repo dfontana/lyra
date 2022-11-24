@@ -31,7 +31,7 @@ fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
   Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
     .center()
     .title("Lyra Settings")
-    .focus()
+    .focused(true)
     .menu(Menu::with_items([
       #[cfg(target_os = "macos")]
       MenuEntry::Submenu(Submenu::new(
@@ -96,7 +96,7 @@ fn main() {
       if let WindowEvent::Focused(focused) = event.event() {
         if !focused && event.window().label() == Page::Main(MainData::default()).id() {
           #[cfg(not(debug_assertions))]
-          Closer::close(&event.window());
+          closer::close_win(event.window());
         }
       }
     })
