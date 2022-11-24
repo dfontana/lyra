@@ -5,8 +5,8 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 ### Commands
 
 - `yarn install && yarn build` to init the repo
-- `yarn tauri dev` for dev server
-- `yarn tauri build` to package app
+- `cargo tauri dev` for dev server
+- `cargo tauri build` to package app
   - Binary built: `src-tauri/target/release/[app name]`
   - Installers built: `src-tauri/target/release/bundle/`
 - `yarn react-devtools` to debug
