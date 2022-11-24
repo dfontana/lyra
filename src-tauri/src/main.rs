@@ -127,7 +127,8 @@ fn main() {
         .visible(false)
         .fullscreen(false)
         .skip_taskbar(true)
-        .center()
+        .center() 
+        .transparent(true)
         .initialization_script(&page.init_script()?)
         .build()?;
 

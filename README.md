@@ -17,6 +17,14 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 - Polish:
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
+- Bugs:
+  - Using arrow keys is skipping items in list. Why? 
+  - Searchers should stay in list if prefix is typed + space
+    - type "gs" and select not google
+    - type " " and first matching prefix should select
+    - If a matching prefix is already selected, though, it shouldn't change selection (so reality is we just don't want to filter it out)
+  - Searchers, when selected with 'enter', should insert a space and prompt for templates
+    - Each time enter is pressed should continue prompting for templates until no more templates left
 
 ### Roadmap
 
