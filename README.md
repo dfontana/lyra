@@ -6,6 +6,7 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 - `yarn install && yarn build` to init the repo
 - `cargo tauri dev` for dev server
+- `cargo tauri icon ../src-icon/app-icon.png` for icons (from the `src-tauri` dir)
 - `cargo tauri build` to package app
   - Binary built: `src-tauri/target/release/[app name]`
   - Installers built: `src-tauri/target/release/bundle/`
@@ -17,9 +18,7 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 - [ ] Setting input for remainder of config items
 - [ ] Lingering TODOs
-- [ ] Get Lyra icons generated: https://tauri.studio/v1/guides/examples/icons/
-  - [ ] App styling finalizations (Notably some blue background peeking through the input)
-  - [ ] Repo name (no longer really needs to be called `-parent`)
+- [ ] App styling finalizations (Notably some blue background peeking through the input)
 - [ ] Release process for GH & homebrew tap
 - [ ] AppIcon Cache ought to live in it's own config file, given the size makes config editing hard
 
