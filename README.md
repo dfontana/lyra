@@ -16,8 +16,6 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 #### TODO
 
 - Polish:
-  - Fix all the clippy warns
-  - Fix log rotation (need to clear old logs out from > N days ago)
   - Setting page validation & cleanup
     - No spaces in shortnames for searchers, need links/labels/icons, templates validity etc
   - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
