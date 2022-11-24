@@ -95,37 +95,37 @@ impl AsRef<str> for SearchOption {
   }
 }
 
-impl Into<SearchOption> for &Bookmark {
-  fn into(self) -> SearchOption {
+impl From<&Bookmark> for SearchOption {
+  fn from(bk: &Bookmark) -> SearchOption {
     SearchOption::Bookmark(BookmarkOption {
       rank: 0,
-      label: self.label.clone(),
-      shortname: self.shortname.clone(),
-      icon: self.icon.clone(),
+      label: bk.label.clone(),
+      shortname: bk.shortname.clone(),
+      icon: bk.icon.clone(),
     })
   }
 }
 
-impl Into<SearchOption> for &Searcher {
-  fn into(self) -> SearchOption {
+impl From<&Searcher> for SearchOption {
+  fn from(sh: &Searcher) -> SearchOption {
     SearchOption::Searcher(SearcherOption {
       rank: 0,
-      label: self.label.clone(),
-      shortname: self.shortname.clone(),
-      icon: self.icon.clone(),
-      required_args: self.template.markers,
+      label: sh.label.clone(),
+      shortname: sh.shortname.clone(),
+      icon: sh.icon.clone(),
+      required_args: sh.template.markers,
       args: Vec::new(),
     })
   }
 }
 
-impl Into<SearchOption> for App {
-  fn into(self) -> SearchOption {
+impl From<App> for SearchOption {
+  fn from(app: App) -> SearchOption {
     SearchOption::App(AppOption {
       rank: 0,
-      label: self.label.clone(),
-      path: self.path.to_string_lossy().to_string(),
-      icon: self.icon.clone(),
+      label: app.label.clone(),
+      path: app.path.to_string_lossy().to_string(),
+      icon: app.icon.clone(),
     })
   }
 }

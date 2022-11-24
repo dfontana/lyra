@@ -77,28 +77,28 @@ fn main() {
 
   tauri::Builder::default()
     .system_tray(SystemTray::new().with_menu(tray_menu))
-    .on_system_tray_event(|app, event| match event {
-      SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-        "quit" => {
-          std::process::exit(0);
-        }
-        "settings" => {
-          if let Err(err) = open_settings(app) {
-            error!("Failed to open settings: {}", err);
+    .on_system_tray_event(|app, event| {
+      if let SystemTrayEvent::MenuItemClick { id, .. } = event {
+        match id.as_str() {
+          "quit" => {
+            std::process::exit(0);
           }
+          "settings" => {
+            if let Err(err) = open_settings(app) {
+              error!("Failed to open settings: {}", err);
+            }
+          }
+          _ => {}
         }
-        _ => {}
-      },
-      _ => {}
+      }
     })
-    .on_window_event(|event| match event.event() {
-      WindowEvent::Focused(focused) => {
+    .on_window_event(|event| {
+      if let WindowEvent::Focused(focused) = event.event() {
         if !focused && event.window().label() == Page::Main(MainData::default()).id() {
           #[cfg(not(debug_assertions))]
           Closer::close(&event.window());
         }
       }
-      _ => {}
     })
     .setup(move |app| {
       #[cfg(target_os = "macos")]
@@ -138,7 +138,10 @@ fn main() {
             .get_window(page.id())
             .expect("Framework should have built");
           let is_updated = match win.is_visible() {
-            Ok(true) => Ok(closer::close_win(&win)),
+            Ok(true) => {
+              closer::close_win(&win);
+              Ok(())
+            }
             Ok(false) => win.set_focus(),
             Err(err) => Err(err),
           };

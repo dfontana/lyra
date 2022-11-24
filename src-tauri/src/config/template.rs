@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct Template {
   val: String,
@@ -18,10 +18,9 @@ impl Template {
     let mut hydration = self.val.clone();
     for idx in 0..self.markers {
       let marker = format!("{{{}}}", idx);
-      let arg = args.get(idx).ok_or(TemplateError::HydrateError(format!(
-        "Missing arg {} for template",
-        idx
-      )))?;
+      let arg = args
+        .get(idx)
+        .ok_or_else(|| TemplateError::HydrateError(format!("Missing arg {} for template", idx)))?;
       hydration = hydration.replace(&marker, arg);
     }
     Ok(hydration)
@@ -125,7 +124,7 @@ impl TryFrom<String> for Template {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum TemplateError {
   InvalidFormat(String),
   HydrateError(String),
