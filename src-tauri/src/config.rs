@@ -5,11 +5,16 @@ mod template;
 pub use commands::*;
 pub use logs::init_logs;
 
-use crate::launcher::SearchOption;
+use crate::{convert, launcher::SearchOption};
 use anyhow::{anyhow, Context};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, ops::Deref, path::PathBuf};
+use std::{
+  collections::HashMap,
+  fs,
+  ops::Deref,
+  path::{Path, PathBuf},
+};
 use template::Template;
 use tracing::info;
 
@@ -30,6 +35,8 @@ pub struct InnerConfig {
   pub bookmarks: HashMap<String, Bookmark>,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub searchers: HashMap<String, Searcher>,
+  #[serde(serialize_with = "toml::ser::tables_last")]
+  pub app_icons: HashMap<String, String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -117,6 +124,43 @@ impl Config {
     self.persist()
   }
 
+  pub fn get_app_icon(&self, updated: &Path) -> Result<String, anyhow::Error> {
+    let key = updated.to_str().unwrap().to_string();
+    // TODO Tricky deadlock, but ideally we would persist newly discovered items
+    //      rather than waiting until next restart
+    Ok(
+      self
+        .config
+        .read()
+        .app_icons
+        .get(&key)
+        .map(|v| v.to_string())
+        .get_or_insert_with(|| convert::to_icon(updated).unwrap_or_default())
+        .clone(),
+    )
+  }
+
+  pub fn update_app_icons(&self, updated: Vec<PathBuf>) -> Result<(), anyhow::Error> {
+    let new_app_icons = {
+      let inner = self.config.read();
+      let mut new_app_icons: HashMap<String, String> = updated
+        .iter()
+        .map(|p| (p.to_str().unwrap().to_string(), p))
+        .filter(|(k, _)| !inner.app_icons.contains_key(k))
+        .map(|(k, p)| (k, convert::to_icon(p).unwrap_or_default()))
+        .collect();
+      if new_app_icons.is_empty() {
+        return Ok(());
+      }
+      inner.app_icons.iter().for_each(|(k, v)| {
+        new_app_icons.insert(k.clone(), v.clone());
+      });
+      new_app_icons
+    };
+    (*self.config.write()).app_icons = new_app_icons;
+    self.persist()
+  }
+
   fn persist(&self) -> Result<(), anyhow::Error> {
     let inner = self.config.read();
     fs::write(&self.file, toml::to_string(&*inner)?)?;
@@ -131,18 +175,18 @@ impl Config {
         .bookmarks
         .get(&data.label)
         .map(|bk| bk.link.clone())
-        .ok_or(anyhow!("No such bookmark")),
+        .ok_or_else(|| anyhow!("No such bookmark")),
       SearchOption::Searcher(data) => self
         .get()
         .searchers
         .get(&data.label)
-        .ok_or(anyhow!("No such searcher"))
+        .ok_or_else(|| anyhow!("No such searcher"))
         .and_then(|sh| sh.template.hydrate(&data.args).map_err(|err| err.into())),
       SearchOption::WebQuery(query) => self
         .get()
         .default_web_engine
         .as_ref()
-        .ok_or(anyhow!("No WebEngine configured for queries"))
+        .ok_or_else(|| anyhow!("No WebEngine configured for queries"))
         .and_then(|tp| {
           tp.hydrate(&vec![query.query.clone()])
             .map_err(|err| err.into())
@@ -154,11 +198,11 @@ impl Config {
 pub fn init_home() -> Result<PathBuf, anyhow::Error> {
   let maybe_path = std::env::var("LYRA_HOME")
     .map(PathBuf::from)
-    .or(
+    .or_else(|_| {
       std::env::var("HOME")
         .map(PathBuf::from)
-        .map(|p| p.join(".config/lyra")),
-    )
+        .map(|p| p.join(".config/lyra"))
+    })
     .with_context(|| "Must set either LYRA_HOME or HOME for config resolution");
 
   let conf_dir = maybe_path?;

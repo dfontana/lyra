@@ -9,7 +9,6 @@ pub fn close_win(window: &Window) {
   }
   if let Err(err) = window.emit("reset", json!({"reset": true})) {
     info!("Failed to reset state: {}", err);
-    return;
   }
 }
 

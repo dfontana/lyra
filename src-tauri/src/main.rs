@@ -66,6 +66,10 @@ fn main() {
   };
   let global_cfg = config.clone();
   let apps = AppLookup::new(config.clone());
+  if let Err(e) = apps.init() {
+    info!("Failed to initialize app icons: {}", e);
+    return;
+  }
 
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))

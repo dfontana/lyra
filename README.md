@@ -16,7 +16,6 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 #### TODO
 
 - Polish:
-  - Cache for `.icns` files & init on boot
   - Fix all the clippy warns
   - Fix log rotation (need to clear old logs out from > N days ago)
   - Setting page validation & cleanup
