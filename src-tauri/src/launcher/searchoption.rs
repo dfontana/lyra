@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::config::{Bookmark, Searcher};
+use crate::{
+  config::{Bookmark, Searcher},
+  lookup::applookup::App,
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BookmarkOption {
@@ -28,8 +31,17 @@ pub struct Query {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct AppOption {
+  pub rank: i32,
+  pub label: String,
+  pub icon: String,
+  pub path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum SearchOption {
+  App(AppOption),
   Bookmark(BookmarkOption),
   Searcher(SearcherOption),
   WebQuery(Query),
@@ -38,6 +50,12 @@ pub enum SearchOption {
 impl SearchOption {
   pub fn with_rank(other: &SearchOption, rank: i32) -> SearchOption {
     match other {
+      SearchOption::App(data) => SearchOption::App(AppOption {
+        rank,
+        label: data.label.clone(),
+        path: data.path.clone(),
+        icon: data.icon.clone(),
+      }),
       SearchOption::Bookmark(data) => SearchOption::Bookmark(BookmarkOption {
         rank,
         label: data.label.clone(),
@@ -58,8 +76,9 @@ impl SearchOption {
 
   pub fn rank(&self) -> i32 {
     match self {
-      SearchOption::Searcher(d) => d.rank,
+      SearchOption::App(d) => d.rank,
       SearchOption::Bookmark(d) => d.rank,
+      SearchOption::Searcher(d) => d.rank,
       SearchOption::WebQuery(d) => d.rank,
     }
   }
@@ -68,6 +87,7 @@ impl SearchOption {
 impl AsRef<str> for SearchOption {
   fn as_ref(&self) -> &str {
     match self {
+      SearchOption::App(d) => d.label.as_str(),
       SearchOption::Bookmark(d) => d.shortname.as_str(),
       SearchOption::Searcher(d) => d.shortname.as_str(),
       SearchOption::WebQuery(d) => d.label.as_str(),
@@ -75,26 +95,37 @@ impl AsRef<str> for SearchOption {
   }
 }
 
-impl Into<SearchOption> for &Bookmark {
-  fn into(self) -> SearchOption {
+impl From<&Bookmark> for SearchOption {
+  fn from(bk: &Bookmark) -> SearchOption {
     SearchOption::Bookmark(BookmarkOption {
       rank: 0,
-      label: self.label.clone(),
-      shortname: self.shortname.clone(),
-      icon: self.icon.clone(),
+      label: bk.label.clone(),
+      shortname: bk.shortname.clone(),
+      icon: bk.icon.clone(),
     })
   }
 }
 
-impl Into<SearchOption> for &Searcher {
-  fn into(self) -> SearchOption {
+impl From<&Searcher> for SearchOption {
+  fn from(sh: &Searcher) -> SearchOption {
     SearchOption::Searcher(SearcherOption {
       rank: 0,
-      label: self.label.clone(),
-      shortname: self.shortname.clone(),
-      icon: self.icon.clone(),
-      required_args: self.template.markers,
+      label: sh.label.clone(),
+      shortname: sh.shortname.clone(),
+      icon: sh.icon.clone(),
+      required_args: sh.template.markers,
       args: Vec::new(),
+    })
+  }
+}
+
+impl From<App> for SearchOption {
+  fn from(app: App) -> SearchOption {
+    SearchOption::App(AppOption {
+      rank: 0,
+      label: app.label.clone(),
+      path: app.path.to_string_lossy().to_string(),
+      icon: app.icon.clone(),
     })
   }
 }

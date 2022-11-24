@@ -6,10 +6,14 @@ mod closer;
 mod config;
 mod convert;
 mod launcher;
+mod lookup;
 mod page;
+
+use std::sync::Arc;
 
 use config::{Config, Styles};
 use launcher::Launcher;
+use lookup::applookup::AppLookup;
 use page::{MainData, Page, SettingsData};
 use tauri::{
   ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
@@ -19,7 +23,7 @@ use tracing::{error, info};
 
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
   let page = Page::Settings(SettingsData::builder().build()?);
-  if let Some(win) = app.get_window(&page.id()) {
+  if let Some(win) = app.get_window(page.id()) {
     win.show()?;
     win.set_focus()?;
     return Ok(());
@@ -54,13 +58,18 @@ fn main() {
   }
 
   let config = match Config::get_or_init_config() {
-    Ok(c) => c,
+    Ok(c) => Arc::new(c),
     Err(err) => {
       info!("Failed to initialize config: {}", err);
       return;
     }
   };
   let global_cfg = config.clone();
+  let apps = AppLookup::new(config.clone());
+  if let Err(e) = apps.init() {
+    info!("Failed to initialize app icons: {}", e);
+    return;
+  }
 
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))
@@ -68,28 +77,28 @@ fn main() {
 
   tauri::Builder::default()
     .system_tray(SystemTray::new().with_menu(tray_menu))
-    .on_system_tray_event(|app, event| match event {
-      SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-        "quit" => {
-          std::process::exit(0);
-        }
-        "settings" => {
-          if let Err(err) = open_settings(app) {
-            error!("Failed to open settings: {}", err);
+    .on_system_tray_event(|app, event| {
+      if let SystemTrayEvent::MenuItemClick { id, .. } = event {
+        match id.as_str() {
+          "quit" => {
+            std::process::exit(0);
           }
+          "settings" => {
+            if let Err(err) = open_settings(app) {
+              error!("Failed to open settings: {}", err);
+            }
+          }
+          _ => {}
         }
-        _ => {}
-      },
-      _ => {}
+      }
     })
-    .on_window_event(|event| match event.event() {
-      WindowEvent::Focused(focused) => {
+    .on_window_event(|event| {
+      if let WindowEvent::Focused(focused) = event.event() {
         if !focused && event.window().label() == Page::Main(MainData::default()).id() {
           #[cfg(not(debug_assertions))]
           Closer::close(&event.window());
         }
       }
-      _ => {}
     })
     .setup(move |app| {
       #[cfg(target_os = "macos")]
@@ -100,7 +109,7 @@ fn main() {
         option_height,
         font_size,
         ..
-      } = config.get().styles;
+      } = global_cfg.get().styles;
       let page = Page::Main(
         MainData::builder()
           .style(("OPTION_HEIGHT".into(), option_height.into()))
@@ -129,7 +138,10 @@ fn main() {
             .get_window(page.id())
             .expect("Framework should have built");
           let is_updated = match win.is_visible() {
-            Ok(true) => Ok(closer::close_win(&win)),
+            Ok(true) => {
+              closer::close_win(&win);
+              Ok(())
+            }
             Ok(false) => win.set_focus(),
             Err(err) => Err(err),
           };
@@ -139,8 +151,8 @@ fn main() {
         })?;
       Ok(())
     })
-    .manage(global_cfg.clone())
-    .manage(Launcher::new(global_cfg))
+    .manage(config.clone())
+    .manage(Launcher::new(config, apps))
     .invoke_handler(tauri::generate_handler![
       closer::close,
       convert::image_data_url,
