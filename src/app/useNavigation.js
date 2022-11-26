@@ -9,18 +9,32 @@ export default function useNavigation({ results, onSubmit }) {
   const [isEnter, resetEnter] = useKeyPressResetable('Enter');
 
   useEffect(() => {
-    if (isArrowDown && selection < results.length - 1) {
-      setSelected(selection + 1);
+    if (results && selection > results.length - 1) {
+      setSelected(results.length - 1);
+    }
+  }, [results, selection, setSelected]);
+
+  useEffect(() => {
+    if (isArrowDown) {
+      if (selection < results.length - 1) {
+        setSelected(selection + 1);
+      }
       resetDown();
     }
   }, [isArrowDown, resetDown, selection, setSelected, results]);
 
   useEffect(() => {
-    if (isArrowUp && selection > 0) {
-      setSelected(selection - 1);
+    if (isArrowUp) {
+      if (selection > 0) {
+        setSelected(selection - 1);
+      }
       resetUp();
     }
   }, [isArrowUp, resetUp, selection, setSelected]);
+
+  useEffect(() => {
+    console.log(`${selection}, ${isArrowUp} or ${isArrowDown}`)
+  }, [selection, isArrowUp, isArrowDown]);
 
   useEffect(() => {
     if (isEnter) {

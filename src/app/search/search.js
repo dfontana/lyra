@@ -7,17 +7,29 @@ import './search.css';
 const { SEARCH, SELECT_SEARCH, SUBMIT } = window.__LYRA__.calls;
 const { OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
-const isSearcherSelected = (results, selection, search) => {
-  const item = results[selection];
-  return item?.type === 'Searcher' && search.startsWith(item?.shortname) && search.includes(' ');
+const isSearcherSelected = (selected) => {
+  return selected?.type === 'Searcher';
 };
 
-const isWebQuerySelected = (results, selection) => {
-  return results[selection]?.type === 'WebQuery';
+const isSearcherSelectedWhileTemplating = (item, search) => {
+  return isSearcherSelected(item) && search.startsWith(item?.shortname) && search.includes(' ');
+};
+
+const isSearcherNotSelectedWhenTemplateStarts = (results, selection, search) => {
+  let selected = results[selection];
+  return (
+    selected?.type !== 'Searcher' &&
+    search.endsWith(' ') &&
+    search.startsWith(results[0]?.shortname)
+  );
+};
+
+const isWebQuerySelected = (selected) => {
+  return selected?.type === 'WebQuery';
 };
 
 const split = (str, sep, n) => {
-  let split = str.split(sep);
+  let split = str.trim().split(sep);
   if (split.length <= n) return split;
   var out = split.slice(0, n - 1);
   out.push(split.slice(n - 1).join(sep));
@@ -32,17 +44,20 @@ function Search({ inputRef, resetRef, search }) {
     onSubmit: (selection) => {
       let selected = { ...results[selection] };
 
-      if (isSearcherSelected(results, selection, search)) {
+      if (isSearcherSelected(selected)) {
         const expectArgs = results[selection].required_args;
         const args = split(search, ' ', expectArgs + 1);
         console.log(args, expectArgs);
         if (args.length - 1 !== expectArgs) {
           // Not yet ready to search need more args
+          if (!search.endsWith(' ')) {
+            setSearch((p) => p + ' ');
+          }
           return;
         }
         // ready to search, add the args in
         selected.args = args.slice(1);
-      } else if (isWebQuerySelected(results, selection)) {
+      } else if (isWebQuerySelected(selected)) {
         selected.query = search;
       }
       invoke(SUBMIT, { selected }).catch(console.error);
@@ -50,9 +65,19 @@ function Search({ inputRef, resetRef, search }) {
   });
 
   useEffect(() => {
-    if (results.length > 1 && isSearcherSelected(results, selection, search)) {
+    if (results.length <= 1) {
+      return;
+    }
+    if (isSearcherSelectedWhileTemplating(results[selection], search)) {      
       // Clear results to only be the selected item
       setResults(results.filter((_, i) => i === selection));
+      resetNav();
+      invoke(SELECT_SEARCH).catch(console.error);
+      return;
+    } else if (isSearcherNotSelectedWhenTemplateStarts(results, selection, search)) {
+      // Change selection to only be the searcher. This _may_ be a bug in waiting
+      // as it assumes the matching item is the first in the results.
+      setResults(results.filter((sh, _) => sh?.shortname === search.trim()));
       resetNav();
       invoke(SELECT_SEARCH).catch(console.error);
       return;
@@ -61,7 +86,7 @@ function Search({ inputRef, resetRef, search }) {
 
   const triggerSearch = useCallback(
     ({ key }) => {
-      if (isSearcherSelected(results, selection, search)) {
+      if (isSearcherSelectedWhileTemplating(results[selection], search)) {
         // Do not trigger a search when a searcher is selected and a space has been entered
         return;
       }
@@ -71,7 +96,7 @@ function Search({ inputRef, resetRef, search }) {
         case 'ArrowUp':
           return;
         default:
-          invoke(SEARCH, { search }).then(setResults).catch(console.error);
+          invoke(SEARCH, { search: search.trim() }).then(setResults).catch(console.error);
       }
     },
     [search, selection, results]
