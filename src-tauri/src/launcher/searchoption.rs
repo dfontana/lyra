@@ -133,7 +133,7 @@ impl From<App> for SearchOption {
 impl Default for Query {
   fn default() -> Self {
     Self {
-      rank: i32::MIN,
+      rank: i32::MAX,
       label: "Search the Web".into(),
       query: "".into(),
     }

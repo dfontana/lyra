@@ -1,8 +1,6 @@
 mod commands;
 mod searchoption;
 
-use std::cmp::Reverse;
-
 use crate::{
   config::Config,
   lookup::applookup::{App, AppLookup},
@@ -61,8 +59,9 @@ impl Launcher {
         }
       })
       .collect();
+    options.sort_by_cached_key(SearchOption::rank);
+    options.truncate(9);
     options.push(SearchOption::WebQuery(Query::default()));
-    options.sort_by_key(|r| Reverse(r.rank()));
     options
   }
 

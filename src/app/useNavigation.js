@@ -33,10 +33,6 @@ export default function useNavigation({ results, onSubmit }) {
   }, [isArrowUp, resetUp, selection, setSelected]);
 
   useEffect(() => {
-    console.log(`${selection}, ${isArrowUp} or ${isArrowDown}`)
-  }, [selection, isArrowUp, isArrowDown]);
-
-  useEffect(() => {
     if (isEnter) {
       resetEnter();
       onSubmit(selection);
