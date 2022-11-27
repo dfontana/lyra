@@ -10,7 +10,7 @@ export default function useNavigation({ results, onSubmit }) {
 
   useEffect(() => {
     if (results && selection > results.length - 1) {
-      setSelected(results.length - 1);
+      setSelected(Math.max(0, results.length - 1));
     }
   }, [results, selection, setSelected]);
 
