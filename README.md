@@ -11,31 +11,29 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
   - Installers built: `src-tauri/target/release/bundle/`
 - `yarn react-devtools` to debug
 
-### Notes
-
-#### TODO
-
-- Polish:
-  - Get icons generated: https://tauri.studio/v1/guides/examples/icons/
-- Bugs:
-  - Selected items should stay selected when search gets more specific
-    - type "dash"
-    - select dashlane
-    - type "la"
-    - cursor will jump to last item (due to current index capping behavior)
-
 ### Roadmap
 
-#### MVP 1: Bookmarks & App Launcher (MacOS only)
+#### MVP 1: Calc, Bookmarks, Templatables, App Launcher (MacOS only)
 
-- [ ] App 'branding' (icons, styling)
+- [ ] Setting input for remainder of config items
+- [ ] Lingering TODOs
+- [ ] Get Lyra icons generated: https://tauri.studio/v1/guides/examples/icons/
+  - [ ] App styling finalizations (Notably some blue background peeking through the input)
+  - [ ] Repo name (no longer really needs to be called `-parent`)
+- [ ] Release process for GH & homebrew tap
+- [ ] AppIcon Cache ought to live in it's own config file, given the size makes config editing hard
 
 #### MVP 2: Windows / Linux Support
 
+- [ ] Selection improvements
+  - Selected items should stay selected when search gets more specific. Example:
+    - type "dash" (2+ results appear)
+    - select dashlane
+    - type "la"
+    - cursor will jump to last item (web search) (due to current index capping behavior). Ideally it should stick to dashlane, as that was selected and still in the list
 - [ ] Windows works
   - App launcher can find exes
   - AppIcon support
-  - Settings can configure `app_paths` and `app_extensions`
 - [ ] Linux works
   - App launcher can find... what now? .Desktop files?
   - Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
@@ -50,11 +48,11 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 
 #### Bonus:
 
-- [ ] Configuration Styling
-  - [ ] Window Size, location
-  - [ ] Colors (theming)
-  - [ ] Font sizes
+- [ ] Theming/Styling
+  - [ ] Colors
+  - [ ] (More) Font sizes (which means allowing more flexible option sizing)
+  - [ ] Font Style
 - [ ] Configuration KeyBindings: open/hide/up/down/confirm
-- `Assets.car` support on MacOS
-- Setting page validation & cleanup
-  - No spaces in shortnames for searchers, need links/labels/icons, templates validity etc
+- [ ] `Assets.car` support on MacOS for AppIcon resolving
+- [ ] Settings page validation & cleanup
+  - No spaces in shortnames for searchers, need links/labels/icons, templates validity, numbers are numbers etc

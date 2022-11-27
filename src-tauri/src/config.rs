@@ -31,6 +31,8 @@ pub struct InnerConfig {
   pub app_paths: Vec<PathBuf>,
   pub app_extension: String,
   pub calc_trigger: String,
+  #[serde(default = "default_result_count")]
+  pub result_count: usize,
   pub styles: Styles,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub bookmarks: HashMap<String, Bookmark>,
@@ -40,12 +42,23 @@ pub struct InnerConfig {
   pub app_icons: HashMap<String, String>,
 }
 
+fn default_result_count() -> usize {
+  9
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Styles {
   pub option_width: f64,
   pub option_height: f64,
   pub font_size: usize,
+  pub window_placement: Placement,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub enum Placement {
+  Center,
+  XY(f64, f64),
 }
 
 impl Default for Styles {
@@ -54,6 +67,7 @@ impl Default for Styles {
       option_width: 600f64,
       option_height: 38f64,
       font_size: 16,
+      window_placement: Placement::XY(100.0, 100.0),
     }
   }
 }

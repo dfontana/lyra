@@ -47,12 +47,11 @@ function Search({ inputRef, resetRef, search }) {
       if (isSearcherSelected(selected)) {
         const expectArgs = results[selection].required_args;
         const args = split(search, ' ', expectArgs + 1);
-        console.log(args, expectArgs);
         if (args.length - 1 !== expectArgs) {
           // Not yet ready to search need more args
-          if (!search.endsWith(' ')) {
-            setSearch((p) => p + ' ');
-          }
+          // TODO: We don't have access to setSearch so I can't force a space
+          //       if there isn't one yet. Ideally we can do this or just better model
+          //       how this renders in the UI (eg on enter we get prompted or something)
           return;
         }
         // ready to search, add the args in
@@ -68,7 +67,7 @@ function Search({ inputRef, resetRef, search }) {
     if (results.length <= 1) {
       return;
     }
-    if (isSearcherSelectedWhileTemplating(results[selection], search)) {      
+    if (isSearcherSelectedWhileTemplating(results[selection], search)) {
       // Clear results to only be the selected item
       setResults(results.filter((_, i) => i === selection));
       resetNav();

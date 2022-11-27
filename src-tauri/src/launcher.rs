@@ -60,7 +60,7 @@ impl Launcher {
       })
       .collect();
     options.sort_by_cached_key(SearchOption::rank);
-    options.truncate(9);
+    options.truncate(self.config.get().result_count);
     options.push(SearchOption::WebQuery(Query::default()));
     options
   }
