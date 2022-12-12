@@ -84,14 +84,14 @@ function Search({ inputRef, resetRef, search }) {
     };
     return () => {
       resetRef.current = () => {};
-    }
+    };
   }, [resetRef, resetNav, setResults]);
 
   useEffect(() => {
     let node = inputRef.current;
     node.onkeyup = triggerSearch;
     return () => {
-      node.onkeyup = null; 
+      node.onkeyup = null;
     };
   }, [inputRef, triggerSearch]);
 
@@ -112,7 +112,7 @@ function Search({ inputRef, resetRef, search }) {
         />
       ))}
     </>
-  )
+  );
 }
 
 export default Search;

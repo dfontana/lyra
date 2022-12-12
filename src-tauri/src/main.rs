@@ -2,6 +2,7 @@
   all(not(debug_assertions), target_os = "windows"),
   windows_subsystem = "windows"
 )]
+mod calc;
 mod closer;
 mod config;
 mod convert;
@@ -160,6 +161,7 @@ fn main() {
     .manage(config.clone())
     .manage(Launcher::new(config, apps))
     .invoke_handler(tauri::generate_handler![
+      calc::calculate,
       closer::close,
       closer::reset_size,
       convert::image_data_url,
