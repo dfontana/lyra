@@ -1,35 +1,8 @@
+use crate::{closer, config::Config};
 use std::sync::Arc;
-
-use tauri::{LogicalSize, Size};
-use tracing::{error, info};
-
-use crate::{
-  closer,
-  config::{Config, Styles},
-};
+use tracing::info;
 
 use super::{Launcher, SearchOption};
-
-fn resize(
-  height: usize,
-  window: tauri::Window,
-  config: tauri::State<'_, Arc<Config>>,
-) -> Result<(), String> {
-  let Styles {
-    option_height,
-    option_width,
-    ..
-  } = config.get().styles;
-  window
-    .set_size(Size::Logical(LogicalSize {
-      width: option_width,
-      height: option_height * height as f64,
-    }))
-    .map_err(|e| {
-      error!("Failed to resize window {}", e);
-      "Failed to resize window".into()
-    })
-}
 
 #[tauri::command]
 pub async fn search(
@@ -39,7 +12,7 @@ pub async fn search(
   search: String,
 ) -> Result<Vec<SearchOption>, String> {
   let options = launcher.get_options(&search).await;
-  resize(options.len() + 1, window, config)?;
+  closer::resize_to(&window, (*config).clone(), options.len() + 1)?;
   Ok(options)
 }
 
@@ -48,7 +21,7 @@ pub fn select_searcher(
   config: tauri::State<'_, Arc<Config>>,
   window: tauri::Window,
 ) -> Result<(), String> {
-  resize(2, window, config)
+  closer::resize_to(&window, (*config).clone(), 2)
 }
 
 #[tauri::command]

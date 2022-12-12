@@ -1,6 +1,6 @@
 import React from 'react';
 import { Avatar } from '@geist-ui/core';
-import './app.css';
+import './search.css';
 
 const className = (s) => `searchResult ${s ? 'selected' : ''}`;
 
