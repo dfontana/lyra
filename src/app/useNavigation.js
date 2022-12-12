@@ -32,7 +32,6 @@ export default function useNavigation({ results, onSubmit }) {
   return [
     selection,
     () => {
-      resetEnter();
       setSelected(0);
     },
   ];

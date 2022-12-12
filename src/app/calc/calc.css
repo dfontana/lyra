@@ -1,0 +1,13 @@
+.calcError {
+  background: #ffb3b3;
+  border-radius: 4px;
+  border: 1px solid red;
+  display: inline-block;
+  color: #f00;
+}
+
+.calcResult {
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+}
