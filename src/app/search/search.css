@@ -1,0 +1,19 @@
+.searchResult {
+  color: #54e6ae;
+  background-color: aliceblue;
+  display: flex;
+  align-items: center;
+}
+
+.searchResult-icon {
+  margin-left: 5px;
+}
+
+.searchResult-label {
+  margin-left: 5px;
+}
+
+.selected {
+  background-color: #54e6ae;
+  color: aliceblue;
+}

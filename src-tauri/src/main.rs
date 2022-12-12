@@ -133,20 +133,26 @@ fn main() {
       let handle = app.handle();
       app
         .global_shortcut_manager()
+        // TODO move this into the config so folks can customize the trigger
         .register("CmdOrCtrl+Space", move || {
           let win = handle
             .get_window(page.id())
             .expect("Framework should have built");
-          let is_updated = match win.is_visible() {
+          match win.is_visible() {
             Ok(true) => {
               closer::close_win(&win);
-              Ok(())
             }
-            Ok(false) => win.set_focus(),
-            Err(err) => Err(err),
-          };
-          if let Err(err) = is_updated {
-            info!("Failed to toggle window: {}", err);
+            Ok(false) => {
+              if let Err(err) = win.set_focus() {
+                info!("Failed to toggle window: {}", err)
+              }
+              if let Err(err) = closer::reset_size_impl(&win, global_cfg.clone()) {
+                info!("Failed to toggle window: {}", err)
+              }
+            }
+            Err(err) => {
+              info!("Failed to toggle window: {}", err);
+            }
           }
         })?;
       Ok(())
@@ -155,6 +161,7 @@ fn main() {
     .manage(Launcher::new(config, apps))
     .invoke_handler(tauri::generate_handler![
       closer::close,
+      closer::reset_size,
       convert::image_data_url,
       config::get_config,
       config::save_bookmarks,

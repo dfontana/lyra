@@ -30,6 +30,7 @@ pub struct InnerConfig {
   pub default_web_engine: Option<Template>,
   pub app_paths: Vec<PathBuf>,
   pub app_extension: String,
+  pub calc_trigger: String,
   pub styles: Styles,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub bookmarks: HashMap<String, Bookmark>,
@@ -104,7 +105,7 @@ impl Config {
   }
 
   pub fn update_bookmarks(&self, updated: Vec<Bookmark>) -> Result<(), anyhow::Error> {
-    (*self.config.write()).bookmarks = updated.iter().fold(HashMap::new(), |mut acc, v| {
+    self.config.write().bookmarks = updated.iter().fold(HashMap::new(), |mut acc, v| {
       acc.insert(v.label.clone(), v.clone());
       acc
     });
@@ -112,12 +113,12 @@ impl Config {
   }
 
   pub fn update_engine(&self, updated: Template) -> Result<(), anyhow::Error> {
-    (*self.config.write()).default_web_engine = Some(updated);
+    self.config.write().default_web_engine = Some(updated);
     self.persist()
   }
 
   pub fn update_searchers(&self, updated: Vec<Searcher>) -> Result<(), anyhow::Error> {
-    (*self.config.write()).searchers = updated.iter().fold(HashMap::new(), |mut acc, v| {
+    self.config.write().searchers = updated.iter().fold(HashMap::new(), |mut acc, v| {
       acc.insert(v.label.clone(), v.clone());
       acc
     });
@@ -157,7 +158,7 @@ impl Config {
       });
       new_app_icons
     };
-    (*self.config.write()).app_icons = new_app_icons;
+    self.config.write().app_icons = new_app_icons;
     self.persist()
   }
 

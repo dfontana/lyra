@@ -1,7 +1,17 @@
 body {
   margin: 0;
 }
-.searchRoot {
+
+.appInput {
+  margin-left: 5px;
+  color: #54e6ae;
+  width: 100%;
+  padding: 0px;
+  border: 0px;
+  outline: none;
+}
+
+.appRoot {
   width: 100%;
   height: 100%;
   overflow-y: hidden;
@@ -11,33 +21,4 @@ body {
   justify-content: center;
   font-style: normal;
   font-family: 'Courier New', Courier, monospace;
-}
-
-.searchInput {
-  margin-left: 5px;
-  color: #54e6ae;
-  width: 100%;
-  padding: 0px;
-  border: 0px;
-  outline: none;
-}
-
-.searchResult {
-  color: #54e6ae;
-  background-color: aliceblue;
-  display: flex;
-  align-items: center;
-}
-
-.searchResult-icon {
-  margin-left: 5px;
-}
-
-.searchResult-label {
-  margin-left: 5px;
-}
-
-.selected {
-  background-color: #54e6ae;
-  color: aliceblue;
 }

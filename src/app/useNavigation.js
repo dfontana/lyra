@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useKeyPressResetable } from './useKeyPress';
 
-export default function useNavigation({ results, onSubmit, onClose }) {
+export default function useNavigation({ results, onSubmit }) {
   const [selection, setSelected] = useState(0);
 
   const [isArrowDown, resetDown] = useKeyPressResetable('ArrowDown');
   const [isArrowUp, resetUp] = useKeyPressResetable('ArrowUp');
   const [isEnter, resetEnter] = useKeyPressResetable('Enter');
-  const [isEscape, resetEscape] = useKeyPressResetable('Escape');
 
   useEffect(() => {
     if (isArrowDown && selection < results.length - 1) {
@@ -30,18 +29,10 @@ export default function useNavigation({ results, onSubmit, onClose }) {
     }
   }, [isEnter, resetEnter, selection, onSubmit]);
 
-  useEffect(() => {
-    if (isEscape) {
-      resetEscape();
-      onClose();
-    }
-  }, [isEscape, resetEscape, onClose]);
-
   return [
     selection,
     () => {
       resetEnter();
-      resetEscape();
       setSelected(0);
     },
   ];
