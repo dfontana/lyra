@@ -2,6 +2,12 @@ body {
   margin: 0;
 }
 
+#root {
+  background: aliceblue;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
 .appInput {
   margin-left: 5px;
   color: #54e6ae;
@@ -21,4 +27,5 @@ body {
   justify-content: center;
   font-style: normal;
   font-family: 'Courier New', Courier, monospace;
+  background: transparent;
 }

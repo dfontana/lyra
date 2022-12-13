@@ -18,7 +18,7 @@ export default function Calculator({ inputRef, resetRef, expression }) {
       writeText(result).catch(console.error);
       invoke(CLOSE).catch(console.error);
     }
-  }, [isEnter, resetEnter]);
+  }, [result, isEnter, resetEnter]);
 
   const triggerCalc = useCallback(
     ({ key }) => {

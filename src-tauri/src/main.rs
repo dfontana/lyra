@@ -12,7 +12,7 @@ mod page;
 
 use std::sync::Arc;
 
-use config::{Config, Styles};
+use config::{Config, Placement, Styles};
 use launcher::Launcher;
 use lookup::applookup::AppLookup;
 use page::{MainData, Page, SettingsData};
@@ -109,6 +109,7 @@ fn main() {
         option_width,
         option_height,
         font_size,
+        window_placement,
         ..
       } = global_cfg.get().styles;
       let page = Page::Main(
@@ -119,22 +120,31 @@ fn main() {
           .build()?,
       );
 
-      Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
+      let mut win = Window::builder(app, page.id(), tauri::WindowUrl::App("index.html".into()))
         .inner_size(option_width, option_height)
         .resizable(false)
         .always_on_top(true)
         .decorations(false)
         .visible(false)
         .fullscreen(false)
-        .skip_taskbar(true)
-        .center()
+        .skip_taskbar(true);
+      match window_placement {
+        Placement::Center => {
+          win = win.center();
+        }
+        Placement::XY(x, y) => {
+          win = win.position(x, y);
+        }
+      }
+      win
+        .transparent(true)
         .initialization_script(&page.init_script()?)
         .build()?;
 
       let handle = app.handle();
       app
         .global_shortcut_manager()
-        // TODO move this into the config so folks can customize the trigger
+        // TODO: move this into the config so folks can customize the trigger
         .register("CmdOrCtrl+Space", move || {
           let win = handle
             .get_window(page.id())
