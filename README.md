@@ -14,6 +14,8 @@
   <a href="#license">License</a>
 </p>
 
+## Status
+
 Nearly there! Final polishes on MacOs before we can start focusing back on Linux/Windows experience.
 
 ## Roadmap
