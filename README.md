@@ -1,25 +1,31 @@
-# Lyra
+<h1 align="center">
+  <br>
+  <img src="https://raw.githubusercontent.com/dfontana/lyra/master/src-icons/app-icon-alt.png" alt="Lyra" width="200">
+  <br>
+  Lyra
+  <br>
+</h1>
 
-WIP - a cross-platform Spotlight/Alfred look-a-like
+<h4 align="center">A cross-platform launcher built with <a href="https://tauri.app/" target="_blank">Tauri</a>.</h4>
 
-### Commands
+<p align="center">
+  <a href="#status">Status</a> •
+  <a href="#roadmap">Roadmap</a> •
+  <a href="#development">Development</a> •
+  <a href="#license">License</a>
+</p>
 
-- `yarn install && yarn build` to init the repo
-- `cargo tauri dev` for dev server
-- `cargo tauri build` to package app
-  - Binary built: `src-tauri/target/release/[app name]`
-  - Installers built: `src-tauri/target/release/bundle/`
-- `yarn react-devtools` to debug
+## Status
 
-### Roadmap
+Nearly there! Final polishes on MacOs before we can start focusing back on Linux/Windows experience.
+
+## Roadmap
 
 #### MVP 1: Calc, Bookmarks, Templatables, App Launcher (MacOS only)
 
 - [ ] Setting input for remainder of config items
 - [ ] Lingering TODOs
-- [ ] Get Lyra icons generated: https://tauri.studio/v1/guides/examples/icons/
-  - [ ] App styling finalizations (Notably some blue background peeking through the input)
-  - [ ] Repo name (no longer really needs to be called `-parent`)
+- [ ] App styling finalizations (Notably some blue background peeking through the input)
 - [ ] Release process for GH & homebrew tap
 - [ ] AppIcon Cache ought to live in it's own config file, given the size makes config editing hard
 
@@ -56,3 +62,16 @@ WIP - a cross-platform Spotlight/Alfred look-a-like
 - [ ] `Assets.car` support on MacOS for AppIcon resolving
 - [ ] Settings page validation & cleanup
   - No spaces in shortnames for searchers, need links/labels/icons, templates validity, numbers are numbers etc
+
+## Development
+
+### Quick Reference
+
+- `yarn install && yarn build` to init the repo
+- `cargo tauri dev` for dev server
+- `cargo tauri icon ../src-icon/app-icon.png` for icons (from the `src-tauri` dir)
+- `cargo tauri build` to package app
+  - Binary built: `src-tauri/target/release/[app name]`
+  - Installers built: `src-tauri/target/release/bundle/`
+- `yarn react-devtools` to debug
+
