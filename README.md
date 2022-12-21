@@ -1,8 +1,7 @@
 <h1 align="center">
   <br>
-  <img src="https://raw.githubusercontent.com/dfontana/lyra/master/src-icons/app-icon-alt.png" alt="Lyra" width="200">
-  <br>
   Lyra
+  <img src="https://raw.githubusercontent.com/dfontana/lyra/master/src-icons/app-icon-alt.png" alt="Lyra" width="25">
   <br>
 </h1>
 
