@@ -61,6 +61,11 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 - [ ] `Assets.car` support on MacOS for AppIcon resolving
 - [ ] Settings page validation & cleanup
   - No spaces in shortnames for searchers, need links/labels/icons, templates validity, numbers are numbers etc
+- [ ] Allow configuration to reload without reboot (eg placing window)
+- [ ] Parse window placement better... below is bad. v bad.
+  ```
+  window_placement = { XY = {0 = 420.0, 1 = 100.0} }
+  ```
 
 ## Development
 
