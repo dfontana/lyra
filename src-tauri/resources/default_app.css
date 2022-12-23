@@ -1,4 +1,4 @@
-body {
+#root-box {
   margin: 0;
 }
 
@@ -28,4 +28,37 @@ body {
   font-style: normal;
   font-family: 'Courier New', Courier, monospace;
   background: transparent;
+}
+
+.searchResult {
+  color: #54e6ae;
+  display: flex;
+  align-items: center;
+}
+
+.searchResult-icon {
+  margin-left: 5px;
+}
+
+.searchResult-label {
+  margin-left: 5px;
+}
+
+.selected {
+  background-color: #54e6ae;
+  color: aliceblue;
+}
+
+.calcError {
+  background: #ffb3b3;
+  border-radius: 4px;
+  border: 1px solid red;
+  display: inline-block;
+  color: #f00;
+}
+
+.calcResult {
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
 }

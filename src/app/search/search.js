@@ -2,7 +2,6 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useCallback, useEffect, useState } from 'react';
 import useNavigation from '../useNavigation';
 import SearchResult from './searchResult';
-import './search.css';
 
 const { SEARCH, SELECT_SEARCH, SUBMIT } = window.__LYRA__.calls;
 const { OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;

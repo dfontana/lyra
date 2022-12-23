@@ -10,18 +10,20 @@ mod launcher;
 mod lookup;
 mod page;
 
-use std::sync::Arc;
+use std::{io::Read, path::Path, sync::Arc};
 
 use config::{Config, Placement, Styles};
 use launcher::Launcher;
 use lookup::applookup::AppLookup;
 use page::{MainData, Page, SettingsData};
 use tauri::{
-  ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
-  MenuItem, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window, WindowEvent,
+  http::ResponseBuilder, ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager,
+  Manager, Menu, MenuEntry, MenuItem, Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, Window,
+  WindowEvent,
 };
 use tracing::{error, info};
 
+// TODO: Break this into it's own file, it's too crowded in here
 fn open_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
   let page = Page::Settings(SettingsData::builder().build()?);
   if let Some(win) = app.get_window(page.id()) {
@@ -66,12 +68,15 @@ fn main() {
     }
   };
   let global_cfg = config.clone();
+  let style_cfg = config.clone();
   let apps = AppLookup::new(config.clone());
   if let Err(e) = apps.init() {
     info!("Failed to initialize app icons: {}", e);
     return;
   }
 
+  // TODO: Can I create a system tray initializer? (Pass a builder, return it? Like wrapping it?)
+  //       can then just loop over a list of method references to run the builder through
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))
     .add_item(CustomMenuItem::new("quit".to_string(), "Quit"));
@@ -103,7 +108,7 @@ fn main() {
     })
     .setup(move |app| {
       #[cfg(target_os = "macos")]
-      app.set_activation_policy(ActivationPolicy::Accessory);
+      app.set_activation_policy(ActivationPolicy::Accessory); 
 
       let Styles {
         option_width,
@@ -184,6 +189,37 @@ fn main() {
       launcher::search,
       launcher::select_searcher
     ])
+    // TODO: Move this into a dedicated initializer
+    .register_uri_scheme_protocol("styles", move |app, request| {
+      // Ensures we have default styles initialized. Since we need a path
+      // resolver to find the resources dir with the defaults, we can't
+      // do this during config object setup
+      // TODO: Would like to init this here rather than in setup, but need a flag to track
+      //    if we've already initialized. How can we do this? Can tauri state be accessed?
+      style_cfg.init_styles(
+        app.path_resolver().resource_dir().unwrap(),
+        cfg!(debug_assertions),
+      )?;
+
+      info!("Requested Stylesheet: {}", request.uri());
+      let path = style_cfg.get_app_styles_path()?.join(
+        request
+          .uri()
+          .strip_prefix("styles://")
+          .and_then(|s| s.strip_suffix('/'))
+          .map(Path::new)
+          .unwrap(),
+      );
+      info!("Parsed: {:?}", path);
+      let mut content = std::fs::File::open(path)?;
+      let mut buf = Vec::new();
+      content.read_to_end(&mut buf)?;
+      info!("Sent stylesheet");
+      ResponseBuilder::new()
+        .mimetype("text/css")
+        .status(200)
+        .body(buf)
+    })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

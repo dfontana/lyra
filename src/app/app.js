@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Search from './search/search';
 import Calculator from './calc/calculator';
 import { useKeyPressResetable } from './useKeyPress';
-import './app.css';
 
 const { RESET } = window.__LYRA__.events;
 const { RESET_SIZE, CLOSE } = window.__LYRA__.calls;

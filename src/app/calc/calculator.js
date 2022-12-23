@@ -2,7 +2,6 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { writeText } from '@tauri-apps/api/clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import { useKeyPressResetable } from '../useKeyPress';
-import './calc.css';
 
 const { CLOSE, CALCULATE } = window.__LYRA__.calls;
 const { OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
