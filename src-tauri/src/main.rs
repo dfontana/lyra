@@ -190,10 +190,8 @@ fn main() {
     .setup(move |app| {
       #[cfg(target_os = "macos")]
       app.set_activation_policy(ActivationPolicy::Accessory);
-
       let page = Page::Main(MainData::builder().build()?);
       open_app(page, app, global_cfg)?;
-
       Ok(())
     })
     .manage(config.clone())
