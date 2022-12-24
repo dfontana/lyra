@@ -2,11 +2,10 @@ mod commands;
 mod logs;
 mod template;
 
-pub use commands::*;
-pub use logs::init_logs;
-
 use crate::{convert, launcher::SearchOption};
 use anyhow::{anyhow, Context};
+pub use commands::*;
+pub use logs::init_logs;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -16,12 +15,13 @@ use std::{
   path::{Path, PathBuf},
 };
 use template::Template;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Debug, Default)]
 pub struct Config {
   pub config: RwLock<InnerConfig>,
   file: PathBuf,
+  styles_inited: RwLock<bool>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -34,6 +34,7 @@ pub struct InnerConfig {
   #[serde(default = "default_result_count")]
   pub result_count: usize,
   pub styles: Styles,
+  pub app_styles_path: PathBuf,
   #[serde(serialize_with = "toml::ser::tables_last")]
   pub bookmarks: HashMap<String, Bookmark>,
   #[serde(serialize_with = "toml::ser::tables_last")]
@@ -49,9 +50,6 @@ fn default_result_count() -> usize {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Styles {
-  pub option_width: f64,
-  pub option_height: f64,
-  pub font_size: usize,
   pub window_placement: Placement,
 }
 
@@ -64,9 +62,6 @@ pub enum Placement {
 impl Default for Styles {
   fn default() -> Self {
     Self {
-      option_width: 600f64,
-      option_height: 38f64,
-      font_size: 16,
       window_placement: Placement::XY(100.0, 100.0),
     }
   }
@@ -108,10 +103,50 @@ impl Config {
       Config {
         config: RwLock::new(inner),
         file: conf_file,
+        styles_inited: RwLock::new(false),
       }
     };
 
     Ok(config)
+  }
+
+  pub fn init_styles(&self, defaults_dir: PathBuf, force_write: bool) -> Result<(), anyhow::Error> {
+    if *self.styles_inited.read() {
+      return Ok(());
+    }
+
+    // Initialize all the files that should exist
+    info!("Checking for style files");
+    let styles_dir = init_home()?.join(&self.get().app_styles_path);
+    fs::read_dir(defaults_dir.join("resources"))?
+      .filter_map(Result::ok)
+      .filter_map(|file| {
+        file
+          .file_name()
+          .as_os_str()
+          .to_string_lossy()
+          .strip_prefix("default_")
+          .map(|name| (file.path(), name.to_string()))
+      })
+      .map(|(file, file_name)| (file, styles_dir.join(file_name)))
+      .filter(|(_, path)| force_write || !path.exists())
+      .for_each(|(default_file_path, config_style_path)| {
+        info!(
+          "Initializing style file {} @ {}",
+          default_file_path.display(),
+          config_style_path.display()
+        );
+        if let Err(e) = std::fs::copy(default_file_path, config_style_path) {
+          error!("Failed to init style file {:?}", e)
+        };
+      });
+    (*self.styles_inited.write()) = true;
+    Ok(())
+  }
+
+  pub fn get_app_styles_path(&self) -> Result<PathBuf, anyhow::Error> {
+    let conf_dir = init_home()?;
+    Ok(conf_dir.join(&self.get().app_styles_path))
   }
 
   pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {

@@ -30,6 +30,7 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 
 #### MVP 2: Windows / Linux Support
 
+- [ ] Theming: Carefully evaluate css class names & HTML structure for more options
 - [ ] Selection improvements
   - Selected items should stay selected when search gets more specific. Example:
     - type "dash" (2+ results appear)
@@ -48,15 +49,11 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 
 - [ ] File launcher/finder (fzf/rg?)
   - [ ] Ability to search files and present top N options
-  - [ ] Abililty to open on enter
+  - [ ] Ability to open on enter
   - [ ] Configure paths to search
 
 #### Bonus:
 
-- [ ] Theming/Styling
-  - [ ] Colors
-  - [ ] (More) Font sizes (which means allowing more flexible option sizing)
-  - [ ] Font Style
 - [ ] Configuration KeyBindings: open/hide/up/down/confirm
 - [ ] `Assets.car` support on MacOS for AppIcon resolving
 - [ ] Settings page validation & cleanup

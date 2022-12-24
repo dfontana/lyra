@@ -2,10 +2,8 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { writeText } from '@tauri-apps/api/clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import { useKeyPressResetable } from '../useKeyPress';
-import './calc.css';
 
 const { CLOSE, CALCULATE } = window.__LYRA__.calls;
-const { OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
 export default function Calculator({ inputRef, resetRef, expression }) {
   const [result, setResult] = useState('');
@@ -60,13 +58,7 @@ export default function Calculator({ inputRef, resetRef, expression }) {
     ];
   }
   return (
-    <div
-      className="calcResult"
-      style={{
-        fontSize: `${FONT_SIZE}px`,
-        height: `${OPTION_HEIGHT}px`,
-      }}
-    >
+    <div className="calcResult">
       {body.map((c, i) => (
         <span key={i} className={c.cx}>
           {c.v}

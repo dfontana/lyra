@@ -4,11 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Search from './search/search';
 import Calculator from './calc/calculator';
 import { useKeyPressResetable } from './useKeyPress';
-import './app.css';
 
 const { RESET } = window.__LYRA__.events;
-const { RESET_SIZE, CLOSE } = window.__LYRA__.calls;
-const { INPUT_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
+const { CLOSE } = window.__LYRA__.calls;
 
 const MODES = {
   INIT: 'init',
@@ -38,7 +36,6 @@ function App() {
     } else if (initInput && mode !== MODES.SEARCH) {
       setMode(MODES.SEARCH);
     } else if (!initInput && mode !== MODES.INIT) {
-      invoke(RESET_SIZE, {}).catch(console.error);
       setMode(MODES.INIT);
     }
   }, [mode, setMode, initInput]);
@@ -73,10 +70,6 @@ function App() {
         autoCorrect="off"
         onChange={onChange}
         value={initInput}
-        style={{
-          height: `${INPUT_HEIGHT}px`,
-          fontSize: `${FONT_SIZE}px`,
-        }}
       />
       {(() => {
         switch (mode) {
