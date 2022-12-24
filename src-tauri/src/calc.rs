@@ -3,7 +3,7 @@ use std::sync::Arc;
 use calc::Context;
 use serde::Serialize;
 
-use crate::{closer, config::Config};
+use crate::config::Config;
 
 #[derive(Serialize)]
 pub struct CalcError {
@@ -18,12 +18,6 @@ pub fn calculate(
   window: tauri::Window,
   expression: String,
 ) -> Result<String, CalcError> {
-  closer::resize_to(&window, (*config).clone(), 2).map_err(|err| CalcError {
-    message: err,
-    start: 0,
-    end: 0,
-  })?;
-
   let mut context = Context::<f64>::default();
   context
     .evaluate_annotated(&expression)

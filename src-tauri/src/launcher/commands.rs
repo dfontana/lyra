@@ -11,17 +11,7 @@ pub async fn search(
   config: tauri::State<'_, Arc<Config>>,
   search: String,
 ) -> Result<Vec<SearchOption>, String> {
-  let options = launcher.get_options(&search).await;
-  closer::resize_to(&window, (*config).clone(), options.len() + 1)?;
-  Ok(options)
-}
-
-#[tauri::command]
-pub fn select_searcher(
-  config: tauri::State<'_, Arc<Config>>,
-  window: tauri::Window,
-) -> Result<(), String> {
-  closer::resize_to(&window, (*config).clone(), 2)
+  Ok(launcher.get_options(&search).await)
 }
 
 #[tauri::command]

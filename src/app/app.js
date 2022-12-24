@@ -6,7 +6,7 @@ import Calculator from './calc/calculator';
 import { useKeyPressResetable } from './useKeyPress';
 
 const { RESET } = window.__LYRA__.events;
-const { RESET_SIZE, CLOSE } = window.__LYRA__.calls;
+const { CLOSE } = window.__LYRA__.calls;
 const { INPUT_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
 const MODES = {
@@ -37,7 +37,6 @@ function App() {
     } else if (initInput && mode !== MODES.SEARCH) {
       setMode(MODES.SEARCH);
     } else if (!initInput && mode !== MODES.INIT) {
-      invoke(RESET_SIZE, {}).catch(console.error);
       setMode(MODES.INIT);
     }
   }, [mode, setMode, initInput]);

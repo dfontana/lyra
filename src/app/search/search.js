@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import useNavigation from '../useNavigation';
 import SearchResult from './searchResult';
 
-const { SEARCH, SELECT_SEARCH, SUBMIT } = window.__LYRA__.calls;
+const { SEARCH, SUBMIT } = window.__LYRA__.calls;
 const { OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
 const isSearcherSelected = (selected) => {
@@ -70,14 +70,12 @@ function Search({ inputRef, resetRef, search }) {
       // Clear results to only be the selected item
       setResults(results.filter((_, i) => i === selection));
       resetNav();
-      invoke(SELECT_SEARCH).catch(console.error);
       return;
     } else if (isSearcherNotSelectedWhenTemplateStarts(results, selection, search)) {
       // Change selection to only be the searcher. This _may_ be a bug in waiting
       // as it assumes the matching item is the first in the results.
       setResults(results.filter((sh, _) => sh?.shortname === search.trim()));
       resetNav();
-      invoke(SELECT_SEARCH).catch(console.error);
       return;
     }
   }, [selection, results, search, resetNav, setResults]);
