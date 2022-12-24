@@ -21,7 +21,7 @@ use tracing::{error, info};
 pub struct Config {
   pub config: RwLock<InnerConfig>,
   file: PathBuf,
-  styles_inited: bool,
+  styles_inited: RwLock<bool>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -109,16 +109,16 @@ impl Config {
       Config {
         config: RwLock::new(inner),
         file: conf_file,
-        styles_inited: false,
+        styles_inited: RwLock::new(false),
       }
     };
 
     Ok(config)
   }
 
-  pub fn init_styles(&mut self, defaults_dir: PathBuf, force_write: bool) -> Result<(), anyhow::Error> {
-    if self.styles_inited {
-        return Ok(());
+  pub fn init_styles(&self, defaults_dir: PathBuf, force_write: bool) -> Result<(), anyhow::Error> {
+    if *self.styles_inited.read() {
+      return Ok(());
     }
 
     // Initialize all the files that should exist
@@ -146,7 +146,7 @@ impl Config {
           error!("Failed to init style file {:?}", e)
         };
       });
-    self.styles_inited = true;
+    (*self.styles_inited.write()) = true;
     Ok(())
   }
 

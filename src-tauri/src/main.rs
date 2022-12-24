@@ -194,8 +194,6 @@ fn main() {
       // Ensures we have default styles initialized. Since we need a path
       // resolver to find the resources dir with the defaults, we can't
       // do this during config object setup
-      // TODO: Would like to init this here rather than in setup, but need a flag to track
-      //    if we've already initialized. How can we do this? Can tauri state be accessed?
       style_cfg.init_styles(
         app.path_resolver().resource_dir().unwrap(),
         cfg!(debug_assertions),
