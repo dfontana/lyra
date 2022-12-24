@@ -1,14 +1,11 @@
-use crate::{closer, config::Config};
-use std::sync::Arc;
+use crate::closer;
 use tracing::info;
 
 use super::{Launcher, SearchOption};
 
 #[tauri::command]
 pub async fn search(
-  window: tauri::Window,
   launcher: tauri::State<'_, Launcher>,
-  config: tauri::State<'_, Arc<Config>>,
   search: String,
 ) -> Result<Vec<SearchOption>, String> {
   Ok(launcher.get_options(&search).await)

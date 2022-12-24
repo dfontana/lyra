@@ -7,7 +7,6 @@ import { useKeyPressResetable } from './useKeyPress';
 
 const { RESET } = window.__LYRA__.events;
 const { CLOSE } = window.__LYRA__.calls;
-const { INPUT_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
 const MODES = {
   INIT: 'init',
@@ -71,10 +70,6 @@ function App() {
         autoCorrect="off"
         onChange={onChange}
         value={initInput}
-        style={{
-          height: `${INPUT_HEIGHT}px`,
-          fontSize: `${FONT_SIZE}px`,
-        }}
       />
       {(() => {
         switch (mode) {

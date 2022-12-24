@@ -10,6 +10,9 @@
 }
 
 .appInput {
+  /* TODO: Height & Font refactored to own class given it goes on row elements */
+  height: 38px;
+  font-size: 16px;
   margin-left: 5px;
   color: #54e6ae;
   width: 100%;
@@ -32,6 +35,9 @@
 }
 
 .searchResult {
+  /* TODO: Style bookmarks different than searchers */
+  height: 38px;
+  font-size: 16px;
   color: #54e6ae;
   display: flex;
   align-items: center;
@@ -59,6 +65,8 @@
 }
 
 .calcResult {
+  height: 38px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   padding-left: 10px;

@@ -1,9 +1,5 @@
-use std::sync::Arc;
-
 use calc::Context;
 use serde::Serialize;
-
-use crate::config::Config;
 
 #[derive(Serialize)]
 pub struct CalcError {
@@ -13,11 +9,7 @@ pub struct CalcError {
 }
 
 #[tauri::command]
-pub fn calculate(
-  config: tauri::State<'_, Arc<Config>>,
-  window: tauri::Window,
-  expression: String,
-) -> Result<String, CalcError> {
+pub fn calculate(expression: String) -> Result<String, CalcError> {
   let mut context = Context::<f64>::default();
   context
     .evaluate_annotated(&expression)

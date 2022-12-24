@@ -4,7 +4,6 @@ import useNavigation from '../useNavigation';
 import SearchResult from './searchResult';
 
 const { SEARCH, SUBMIT } = window.__LYRA__.calls;
-const { OPTION_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
 
 const isSearcherSelected = (selected) => {
   return selected?.type === 'Searcher';
@@ -126,10 +125,6 @@ function Search({ inputRef, resetRef, search }) {
           value={label}
           icon={icon}
           selected={idx === selection}
-          style={{
-            fontSize: `${FONT_SIZE}px`,
-            height: `${OPTION_HEIGHT}px`,
-          }}
         />
       ))}
     </>

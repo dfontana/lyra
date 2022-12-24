@@ -191,18 +191,7 @@ fn main() {
       #[cfg(target_os = "macos")]
       app.set_activation_policy(ActivationPolicy::Accessory);
 
-      let Styles {
-        option_height,
-        font_size,
-        ..
-      } = global_cfg.get().styles;
-      let page = Page::Main(
-        MainData::builder()
-          .style(("OPTION_HEIGHT".into(), option_height.into()))
-          .style(("INPUT_HEIGHT".into(), option_height.into()))
-          .style(("FONT_SIZE".into(), font_size.into()))
-          .build()?,
-      );
+      let page = Page::Main(MainData::builder().build()?);
       open_app(page, app, global_cfg)?;
 
       Ok(())

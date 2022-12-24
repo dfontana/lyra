@@ -50,8 +50,6 @@ fn default_result_count() -> usize {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Styles {
-  pub option_height: f64,
-  pub font_size: usize,
   pub window_placement: Placement,
 }
 
@@ -64,8 +62,6 @@ pub enum Placement {
 impl Default for Styles {
   fn default() -> Self {
     Self {
-      option_height: 38f64,
-      font_size: 16,
       window_placement: Placement::XY(100.0, 100.0),
     }
   }
