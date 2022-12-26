@@ -2,7 +2,7 @@ use crate::{closer, config::Config};
 use std::sync::Arc;
 use tracing::info;
 
-use super::{Launcher, SearchOption};
+use super::{Launcher, SortWrapper};
 
 #[tauri::command]
 pub async fn search(
@@ -10,7 +10,7 @@ pub async fn search(
   launcher: tauri::State<'_, Launcher>,
   config: tauri::State<'_, Arc<Config>>,
   search: String,
-) -> Result<Vec<SearchOption>, String> {
+) -> Result<Vec<SortWrapper>, String> {
   let options = launcher.get_options(&search).await;
   closer::resize_to(&window, (*config).clone(), options.len() + 1)?;
   Ok(options)
@@ -27,7 +27,7 @@ pub fn select_searcher(
 #[tauri::command]
 pub fn submit(
   launcher: tauri::State<Launcher>,
-  selected: SearchOption,
+  selected: SortWrapper,
   window: tauri::Window,
 ) -> Result<(), String> {
   match launcher.launch(selected) {

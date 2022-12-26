@@ -7,14 +7,12 @@ mod closer;
 mod config;
 mod convert;
 mod launcher;
-mod lookup;
 mod page;
 
 use std::sync::Arc;
 
 use config::{Config, Placement, Styles};
 use launcher::Launcher;
-use lookup::applookup::AppLookup;
 use page::{MainData, Page, SettingsData};
 use tauri::{
   ActivationPolicy, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuEntry,
@@ -58,19 +56,14 @@ fn main() {
     return;
   }
 
-  let config = match Config::get_or_init_config() {
-    Ok(c) => Arc::new(c),
+  let (config, plugins) = match Config::get_or_init_config() {
+    Ok((c, p)) => (Arc::new(c), p),
     Err(err) => {
       info!("Failed to initialize config: {}", err);
       return;
     }
   };
   let global_cfg = config.clone();
-  let apps = AppLookup::new(config.clone());
-  if let Err(e) = apps.init() {
-    info!("Failed to initialize app icons: {}", e);
-    return;
-  }
 
   let tray_menu = SystemTrayMenu::new()
     .add_item(CustomMenuItem::new("settings".to_string(), "Settings"))
@@ -169,7 +162,7 @@ fn main() {
       Ok(())
     })
     .manage(config.clone())
-    .manage(Launcher::new(config, apps))
+    .manage(Launcher::new(config, plugins))
     .invoke_handler(tauri::generate_handler![
       calc::calculate,
       closer::close,

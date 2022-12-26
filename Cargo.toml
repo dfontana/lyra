@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+  "src-tauri",
+  "src-plugin",
+  "src-plugin-apps",
+  "src-plugin-calc",
+  "src-plugin-mark",
+  "src-plugin-search",
+]
+
