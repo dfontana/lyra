@@ -3,126 +3,147 @@ import { useCallback, useEffect, useState } from 'react';
 import useNavigation from '../useNavigation';
 import useWindowResize from '../useWindowSize';
 import SearchResult from './searchResult';
-
 const { SEARCH, SUBMIT } = window.__LYRA__.calls;
 
-const isSearcherSelected = (selected) => {
-  return selected?.type === 'Searcher';
-};
+const TEMPLATE_NOT_STARTED = "not_start";
+const TEMPLATE_STARTED = "start";
+const TEMPLATE_COMPLETED = "done";
 
-const isSearcherSelectedWhileTemplating = (item, search) => {
-  return isSearcherSelected(item) && search.startsWith(item?.shortname) && search.includes(' ');
-};
-
-const isSearcherNotSelectedWhenTemplateStarts = (results, selection, search) => {
-  let selected = results[selection];
+const isDefaultSearch = (pluginValue) => pluginValue.shortname === ''
+const isTemplatingStarted = (maybePair, search) => {
+  if (!maybePair) {
+    // Can't be templating nothing
+    return false;
+  }
+  let [_, pluginValue] = maybePair;
   return (
-    selected?.type !== 'Searcher' &&
-    search.endsWith(' ') &&
-    search.startsWith(results[0]?.shortname)
-  );
-};
+    !isDefaultSearch(pluginValue) &&
+    search.startsWith(pluginValue.shortname) &&
+    search.includes(' ')
+  )
+}
+const isTemplatingComplete = (maybePair, search) => {
+  if (!maybePair) {
+    // Can't be templating nothing
+    return false;
+  }
+  let [_, pluginValue] = maybePair;
+  const args = extractArgs(pluginValue, search)
+  return args.length === pluginValue.required_args;
+}
 
-const isWebQuerySelected = (selected) => {
-  return selected?.type === 'WebQuery';
+const extractArgs = (pluginValue, search) => {
+  const expectArgs = pluginValue.required_args
+  const args = split(search, ' ', expectArgs + 1)
+  const isDefault = isDefaultSearch(pluginValue)
+  return isDefault ? [search] : args.slice(1)
 };
 
 const split = (str, sep, n) => {
-  let split = str.trim().split(sep);
-  if (split.length <= n) return split;
-  var out = split.slice(0, n - 1);
-  out.push(split.slice(n - 1).join(sep));
-  return out;
-};
+  let split = str.trim().split(sep)
+  if (split.length <= n) return split
+  var out = split.slice(0, n - 1)
+  out.push(split.slice(n - 1).join(sep))
+  return out
+}
 
 function Search({ inputRef, resetRef, search }) {
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState([])
   useWindowResize(results);
+  const [templateState, setTemplateState] = useState(TEMPLATE_NOT_STARTED)
 
   const [selection, resetNav] = useNavigation({
     results,
     onSubmit: (selection) => {
-      let selected = { ...results[selection] };
-
-      if (isSearcherSelected(selected)) {
-        const expectArgs = results[selection].required_args;
-        const args = split(search, ' ', expectArgs + 1);
-        if (args.length - 1 !== expectArgs) {
-          // Not yet ready to search need more args
-          // TODO: We don't have access to setSearch so I can't force a space
-          //       if there isn't one yet. Ideally we can do this or just better model
-          //       how this renders in the UI (eg on enter we get prompted or something)
-          return;
-        }
-        // ready to search, add the args in
-        selected.args = args.slice(1);
-      } else if (isWebQuerySelected(selected)) {
-        selected.query = search;
+      if (templateState !== TEMPLATE_COMPLETED) {
+        // TODO: UI - We don't have access to setSearch so I can't force a space
+        //       if there isn't one yet. Ideally we can do this or just better model
+        //       how this renders in the UI (eg on enter we get prompted or something)
+        return;
       }
-      invoke(SUBMIT, { selected }).catch(console.error);
+      let pair = results[selection];
+      let args = extractArgs(pair[1], search)
+      invoke(SUBMIT, { forPlugin: pair[0], selected: {...pair[1], args }}).catch(console.error)
     },
-  });
+  })
 
   useEffect(() => {
-    if (results.length <= 1) {
-      return;
+    switch (templateState) {
+      case TEMPLATE_NOT_STARTED:
+        // Check if we need enter templating state
+        if (isTemplatingStarted(results?.[selection], search)) {
+          // Set our focus to what we are working on
+          setResults(results.filter((_, i) => i === selection))
+          setTemplateState(TEMPLATE_STARTED);
+          resetNav()
+        } else if (isTemplatingComplete(results?.[selection], search)) {
+          // The default searcher can make this jump
+          setTemplateState(TEMPLATE_COMPLETED);
+        }
+        break;
+      case TEMPLATE_STARTED:
+        if (!isTemplatingStarted(results?.[selection], search)) {
+          setTemplateState(TEMPLATE_NOT_STARTED);
+        } else if (isTemplatingComplete(results?.[selection], search)) {
+          setTemplateState(TEMPLATE_COMPLETED);
+        }
+        break;
+      case TEMPLATE_COMPLETED:
+        if (!isTemplatingComplete(results?.[selection], search)) {
+          setTemplateState(TEMPLATE_STARTED);
+        }
+        break;
+      default:
+        // Not reachable
     }
-    if (isSearcherSelectedWhileTemplating(results[selection], search)) {
-      // Clear results to only be the selected item
-      setResults(results.filter((_, i) => i === selection));
-      resetNav();
-      return;
-    } else if (isSearcherNotSelectedWhenTemplateStarts(results, selection, search)) {
-      // Change selection to only be the searcher. This _may_ be a bug in waiting
-      // as it assumes the matching item is the first in the results.
-      setResults(results.filter((sh, _) => sh?.shortname === search.trim()));
-      resetNav();
-      return;
-    }
-  }, [selection, results, search, resetNav, setResults]);
+  }, [selection, results, search, resetNav, setResults, templateState, setTemplateState])
 
   const triggerSearch = useCallback(
     ({ key }) => {
-      if (isSearcherSelectedWhileTemplating(results[selection], search)) {
-        // Do not trigger a search when a searcher is selected and a space has been entered
-        return;
+      if (templateState !== TEMPLATE_NOT_STARTED) {
+        // Don't search while templating
+        return
       }
       switch (key) {
         case 'Enter':
         case 'ArrowDown':
         case 'ArrowUp':
-          return;
+          return
         default:
-          invoke(SEARCH, { search: search.trim() }).then(setResults).catch(console.error);
+          invoke(SEARCH, { search: search.trim() })
+            .then((r) => {
+              resetNav()
+              setResults(r)
+            })
+            .catch(console.error)
       }
     },
-    [search, selection, results]
-  );
+    [search, resetNav, templateState]
+  )
 
   useEffect(() => {
     resetRef.current = () => {
-      resetNav();
-      setResults([]);
-    };
+      resetNav()
+      setResults([])
+    }
     return () => {
-      resetRef.current = () => {};
-    };
-  }, [resetRef, resetNav, setResults]);
+      resetRef.current = () => {}
+    }
+  }, [resetRef, resetNav, setResults])
 
   useEffect(() => {
-    let node = inputRef.current;
-    node.onkeyup = triggerSearch;
+    let node = inputRef.current
+    node.onkeyup = triggerSearch
     return () => {
-      node.onkeyup = null;
-    };
-  }, [inputRef, triggerSearch]);
+      node.onkeyup = null
+    }
+  }, [inputRef, triggerSearch])
 
   return (
     <>
-      {results.map(({ type, label, icon }, idx) => (
+      {results.map(([_, { label, icon }], idx) => (
         <SearchResult
           key={label}
-          type={type}
           id={label}
           value={label}
           icon={icon}
@@ -130,7 +151,7 @@ function Search({ inputRef, resetRef, search }) {
         />
       ))}
     </>
-  );
+  )
 }
 
-export default Search;
+export default Search

@@ -1,0 +1,9 @@
+[workspace]
+
+members = [
+  "src-tauri",
+  "lyra-plugin",
+  "lyra-plugin-apps",
+  "lyra-plugin-calc",
+  "lyra-plugin-webq",
+]

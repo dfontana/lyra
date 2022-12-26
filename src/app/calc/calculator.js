@@ -6,6 +6,9 @@ import useWindowResize from '../useWindowSize';
 
 const { CLOSE, CALCULATE } = window.__LYRA__.calls;
 
+// TODO: UI - its not yet clear where it may be needed, but the calc may have to reduce it's
+//       window size to 1 search result like when a searcher is selected. The `select` call
+//       is available for this.
 export default function Calculator({ inputRef, resetRef, expression }) {
   const [result, setResult] = useState('');
   const [error, setError] = useState({ message: '', start: 0, end: 0 });
@@ -28,6 +31,7 @@ export default function Calculator({ inputRef, resetRef, expression }) {
         case 'ArrowRight':
           return;
         default:
+          // TODO: UI - this is changed to submit for calc plugin specifically
           invoke(CALCULATE, { expression: expression.slice(1) })
             .then(setResult)
             .catch((err) => {

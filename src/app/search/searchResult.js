@@ -1,19 +1,17 @@
 import React from 'react';
 import { Avatar } from '@geist-ui/core';
 
-const className = (s) => `searchResult ${s ? 'selected' : ''}`;
+const className = (s) => `searchResult ${s ? 'selected' : ''}`
 
-function SearchResult({ type, value, icon, selected, ...rest }) {
+function SearchResult({ value, icon, selected, ...rest }) {
   return (
     <div className={className(selected)} {...rest}>
-      {type !== 'WebQuery' && (
-        <span className="searchResult-icon">
-          <Avatar src={icon} alt="" />
-        </span>
-      )}
-      <span className="searchResult-label">{value}</span>
+      <span className='searchResult-icon'>
+        <Avatar src={icon} alt='' />
+      </span>
+      <span className='searchResult-label'>{value}</span>
     </div>
-  );
+  )
 }
 
-export default SearchResult;
+export default SearchResult

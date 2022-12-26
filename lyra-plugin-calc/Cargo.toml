@@ -1,0 +1,15 @@
+[package]
+name = "lyra-plugin-calc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lyra-plugin = { path = "../lyra-plugin" }
+anyhow = "1.0.57"
+calc = { version = "0.4.0", default-features = false }
+lalrpop-util = { version = "0.19.8", features = ["lexer"] }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.7.1"

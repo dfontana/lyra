@@ -3,7 +3,7 @@ use std::{cmp::Ordering, fs};
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
-use super::init_home;
+use crate::config::init_home;
 
 pub fn init_logs() -> Result<(), anyhow::Error> {
   tracing::subscriber::with_default(
@@ -11,7 +11,8 @@ pub fn init_logs() -> Result<(), anyhow::Error> {
       .with_max_level(Level::INFO)
       .finish(),
     || -> Result<(), anyhow::Error> {
-      let logs_dir = init_home()?.join("logs");
+      let (conf_dir, _) = init_home()?;
+      let logs_dir = conf_dir.join("logs");
       if !logs_dir.exists() {
         info!(
           "Log dir missing, generating default at {}",

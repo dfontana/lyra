@@ -23,6 +23,9 @@ function App() {
   const inputRef = useRef();
   const resetRef = useRef(() => {});
 
+  // TODO: Known bug https://github.com/tauri-apps/tao/issues/434
+  //       if window is resized while hidden it moves. You can try to find a way to solve this by resizing
+  //       after it's un-hidden, but is proving tricky.
   useEffect(() => {
     // Ensure the window is the rgith starting size
     resetSize()
@@ -36,6 +39,12 @@ function App() {
   }, [isEscape, resetEscape]);
 
   useEffect(() => {
+    // TODO: UI = this should change to use the prefix system for plugins. You'll want
+    //       to make sure `initInput` never has a prefix attaached to it when calling
+    //       the backend, so design wisely. MODES may not be needed in the long run
+    //       since we want to join calc & search functionality together into one UI page
+    //       (but maybe with some kind of pluggable behavior since calc renders errors, etc)
+    //       Calc, for example, prunes this before submission.
     if (initInput.startsWith('=')) {
       if (mode !== MODES.CALC) {
         setMode(MODES.CALC);

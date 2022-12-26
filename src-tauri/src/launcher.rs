@@ -1,43 +1,35 @@
-mod commands;
-mod searchoption;
-
 use crate::{
+  closer,
   config::Config,
-  lookup::applookup::{App, AppLookup},
+  plugin_manager::PluginManager,
 };
-pub use commands::*;
-pub use searchoption::{BookmarkOption, SearchOption, SearcherOption};
+use itertools::Itertools;
+use lyra_plugin::{SkimmableOption, PluginName, OkAction};
+use serde_json::Value;
 use skim::prelude::*;
-
-use self::searchoption::Query;
+use tracing::error;
 
 pub struct Launcher {
-  config: Arc<Config>,
-  apps: AppLookup,
+  pub config: Arc<Config>,
+  pub plugins: PluginManager,
 }
 
 impl Launcher {
-  pub fn new(config: Arc<Config>, apps: AppLookup) -> Self {
-    Launcher { config, apps }
-  }
-
-  fn options_to_receiver(&self) -> SkimItemReceiver {
+  fn options_to_receiver(&self, search: &str) -> SkimItemReceiver {
     let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
-    let conf = self.config.get();
-    conf
-      .bookmarks
+    self
+      .plugins
+      .filter_to(&search)
       .iter()
-      .map(|(_, bk)| bk.into())
-      .chain(conf.searchers.iter().map(|(_, sh)| sh.into()))
-      .chain(self.apps.iter().map(App::into))
-      .for_each(|se: SearchOption| {
-        let _ = tx_items.send(Arc::new(se));
+      .flat_map(|pl| pl.skim(search))
+      .for_each(|sk| {
+        let _ = tx_items.send(Arc::new(sk.clone()));
       });
     drop(tx_items); // indicates that all items have been sent
     rx_items
   }
 
-  pub async fn get_options(&self, search: &str) -> Vec<SearchOption> {
+  pub async fn get_options(&self, search: &str) -> Vec<SkimmableOption> {
     if search.is_empty() {
       // Special case, empty string == nothing back instead of everything
       return Vec::new();
@@ -47,27 +39,70 @@ impl Launcher {
       .fuzzy_algorithm(FuzzyAlgorithm::SkimV2)
       .build()
       .create_engine_with_case(search, CaseMatching::Smart);
-    let receiver = self.options_to_receiver();
-    let mut options: Vec<SearchOption> = receiver
+    let receiver = self.options_to_receiver(search);
+    receiver
       .iter()
-      .filter_map(|bk| match fuzzy_engine.match_item(bk.clone()) {
-        None => None,
-        Some(m) => {
-          let rank = m.rank.iter().sum();
-          let opt = (*bk).as_any().downcast_ref::<SearchOption>().unwrap();
-          Some(SearchOption::with_rank(opt, rank))
-        }
+      .filter_map(|sk| fuzzy_engine.match_item(sk.clone()).map(|mr| (sk, mr)))
+      .sorted_by_cached_key(|(_, mr)| mr.rank.iter().sum::<i32>())
+      .take(self.config.get().result_count)
+      .map(|(sk, _)| { 
+        (*sk).as_any()
+          .downcast_ref::<SkimmableOption>()
+          .unwrap()
+          .clone()
       })
-      .collect();
-    options.sort_by_cached_key(SearchOption::rank);
-    options.truncate(self.config.get().result_count);
-    options.push(SearchOption::WebQuery(Query::default()));
-    options
+      .chain(
+        self
+          .plugins
+          .always_present(search)
+          .iter()
+          .flat_map(|pl| pl.static_items())
+      )
+      .collect()
   }
 
-  pub fn launch(&self, selected: SearchOption) -> Result<(), anyhow::Error> {
-    let url = self.config.get_url(&selected)?;
-    open::that(url)?;
-    Ok(())
+  pub fn launch(&self, plugin: PluginName, selected: Value) -> Result<OkAction, Value> {
+    self
+      .plugins
+      .get(&plugin)
+      .map_err(|e| {
+        error!("Failed to execute plugin: {}", e);
+        "Failed to launch".into()
+      })
+      .and_then(|pl| pl.action(selected))
+  }
+}
+
+#[tauri::command]
+pub async fn search(
+  launcher: tauri::State<'_, Launcher>,
+  search: String,
+) -> Result<Vec<(PluginName, Value)>, String> {
+  let options = launcher.get_options(&search).await;
+  Ok(
+    options
+      .iter()
+      .map(|sk| (sk.source.clone(), sk.value.clone()))
+      .collect(),
+  )
+}
+
+#[tauri::command]
+pub fn submit(
+  launcher: tauri::State<'_, Launcher>,
+  for_plugin: PluginName,
+  selected: Value,
+  window: tauri::Window,
+) -> Result<Value, Value> {
+  match launcher.launch(for_plugin, selected) {
+    Ok(OkAction {
+      value,
+      close_win: true,
+    }) => {
+      closer::close_win(&window);
+      Ok(value)
+    }
+    Ok(OkAction { value, .. }) => Ok(value),
+    Err(err) => Err(err),
   }
 }
