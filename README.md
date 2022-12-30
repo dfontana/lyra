@@ -25,6 +25,7 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 - [ ] Setting input for remainder of config items
 - [ ] Lingering TODOs
 - [ ] App styling finalizations (Notably some blue background peeking through the input)
+  - [ ] Document stylesheet configuration setup & DOM structure
 - [ ] Release process for GH & homebrew tap
 - [ ] AppIcon Cache ought to live in it's own config file, given the size makes config editing hard
 
