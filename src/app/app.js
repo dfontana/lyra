@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Search from './search/search';
 import Calculator from './calc/calculator';
 import { useKeyPressResetable } from './useKeyPress';
+import useWindowResize from './useWindowSize';
 
 const { RESET } = window.__LYRA__.events;
 const { CLOSE } = window.__LYRA__.calls;
@@ -18,8 +19,14 @@ function App() {
   const [mode, setMode] = useState(MODES.INIT);
   const [initInput, setInitInput] = useState('');
   const [isEscape, resetEscape] = useKeyPressResetable('Escape');
+  const resetSize = useWindowResize(null);
   const inputRef = useRef();
   const resetRef = useRef(() => {});
+
+  useEffect(() => {
+    // Ensure the window is the rgith starting size
+    resetSize()
+  }, [resetSize])
 
   useEffect(() => {
     if (isEscape) {
@@ -36,9 +43,11 @@ function App() {
     } else if (initInput && mode !== MODES.SEARCH) {
       setMode(MODES.SEARCH);
     } else if (!initInput && mode !== MODES.INIT) {
+      // Ensure the window shrinks after leaving modes
+      resetSize();
       setMode(MODES.INIT);
     }
-  }, [mode, setMode, initInput]);
+  }, [mode, setMode, initInput, resetSize]);
 
   useEffect(() => {
     let unlisten = null;

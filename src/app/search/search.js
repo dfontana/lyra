@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/tauri';
 import { useCallback, useEffect, useState } from 'react';
 import useNavigation from '../useNavigation';
+import useWindowResize from '../useWindowSize';
 import SearchResult from './searchResult';
 
 const { SEARCH, SUBMIT } = window.__LYRA__.calls;
@@ -36,6 +37,7 @@ const split = (str, sep, n) => {
 
 function Search({ inputRef, resetRef, search }) {
   const [results, setResults] = useState([]);
+  useWindowResize(results);
 
   const [selection, resetNav] = useNavigation({
     results,

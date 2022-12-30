@@ -1,9 +1,6 @@
-#root-box {
+.lyra-mainRootBox {
   margin: 0;
   width: 600px;
-}
-
-#root {
   background: aliceblue;
   border-radius: 5px;
   overflow: hidden;

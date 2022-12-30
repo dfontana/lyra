@@ -20,16 +20,14 @@ export default function General({ initialConfig }) {
   }, [engine, setToast]);
 
   // TODO: implement form entries for the following
-  // pub option_width: f64,
-  // pub option_height: f64,
-  // pub font_size: usize,
   // pub app_paths: Vec<PathBuf>,
   // pub app_extension: String,
   // pub result_count: usize
   // pub calc_trigger: String
 
-  // TODO: actually wire this into the initial config & write out, data needs reshaping
-  const [placement, setPlacement] = useState(initialConfig.placement || 'Center');
+  // TODO: initialConfig is not flowing correctly here, we need to get it reshaped to do so 
+  //       (eg this is always defaulting)
+  const [placement, setPlacement] = useState(initialConfig.placement || PLACEMENT_XY);
   const [placementXY, setPlacementXY] = useState(initialConfig.placement?.xy || { x: 0.0, y: 0.0 });
 
   const onPlacementChange = useCallback(
@@ -73,9 +71,9 @@ export default function General({ initialConfig }) {
               placeholder="Window Placement"
               initialValue={placement}
               onChange={onPlacementChange}
+              disabled
             >
               <Select.Option label>Window Placement</Select.Option>
-              <Select.Option value="Center">Center Screen</Select.Option>
               <Select.Option value={PLACEMENT_XY}>Specific X, Y</Select.Option>
             </Select>
           </Grid>

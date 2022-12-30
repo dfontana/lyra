@@ -60,13 +60,9 @@ fn open_app(page: Page, app: &App, cfg: Arc<Config>) -> Result<(), anyhow::Error
     .resizable(false)
     .always_on_top(true)
     .decorations(false)
-    .visible(false)
     .fullscreen(false)
     .skip_taskbar(true);
   match window_placement {
-    Placement::Center => {
-      win = win.center();
-    }
     Placement::XY(x, y) => {
       win = win.position(x, y);
     }

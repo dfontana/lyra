@@ -19,6 +19,9 @@
       },
       "clipboard": {
         "all": true
+      },
+      "window": {
+        "setSize": true
       }
     },
     "bundle": {

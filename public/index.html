@@ -6,11 +6,12 @@
     <link rel="stylesheet" href="styles://app.css">
   </head>
 
-  <body id="root-box">
+  <body class="appRootBox">
     <script>
       if (window.__LYRA_DEBUG__) {
         document.write('<script src="http://localhost:8097"><\/script>');
       }
+      document.body.className = `${window.__LYRA_PAGE__}RootBox`
     </script>
     <div id="root"></div>
   </body>

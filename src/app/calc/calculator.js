@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { writeText } from '@tauri-apps/api/clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import { useKeyPressResetable } from '../useKeyPress';
+import useWindowResize from '../useWindowSize';
 
 const { CLOSE, CALCULATE } = window.__LYRA__.calls;
 
@@ -9,6 +10,7 @@ export default function Calculator({ inputRef, resetRef, expression }) {
   const [result, setResult] = useState('');
   const [error, setError] = useState({ message: '', start: 0, end: 0 });
   const [isEnter, resetEnter] = useKeyPressResetable('Enter');
+  useWindowResize(result);
 
   useEffect(() => {
     if (isEnter) {

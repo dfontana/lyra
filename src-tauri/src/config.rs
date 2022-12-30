@@ -55,7 +55,6 @@ pub struct Styles {
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum Placement {
-  Center,
   XY(f64, f64),
 }
 
