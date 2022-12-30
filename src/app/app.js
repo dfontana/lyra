@@ -4,11 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Search from './search/search';
 import Calculator from './calc/calculator';
 import { useKeyPressResetable } from './useKeyPress';
-import './app.css';
+import useWindowResize from './useWindowSize';
 
 const { RESET } = window.__LYRA__.events;
-const { RESET_SIZE, CLOSE } = window.__LYRA__.calls;
-const { INPUT_HEIGHT, FONT_SIZE } = window.__LYRA__.styles;
+const { CLOSE } = window.__LYRA__.calls;
 
 const MODES = {
   INIT: 'init',
@@ -20,8 +19,14 @@ function App() {
   const [mode, setMode] = useState(MODES.INIT);
   const [initInput, setInitInput] = useState('');
   const [isEscape, resetEscape] = useKeyPressResetable('Escape');
+  const resetSize = useWindowResize(null);
   const inputRef = useRef();
   const resetRef = useRef(() => {});
+
+  useEffect(() => {
+    // Ensure the window is the rgith starting size
+    resetSize()
+  }, [resetSize])
 
   useEffect(() => {
     if (isEscape) {
@@ -38,10 +43,11 @@ function App() {
     } else if (initInput && mode !== MODES.SEARCH) {
       setMode(MODES.SEARCH);
     } else if (!initInput && mode !== MODES.INIT) {
-      invoke(RESET_SIZE, {}).catch(console.error);
+      // Ensure the window shrinks after leaving modes
+      resetSize();
       setMode(MODES.INIT);
     }
-  }, [mode, setMode, initInput]);
+  }, [mode, setMode, initInput, resetSize]);
 
   useEffect(() => {
     let unlisten = null;
@@ -73,10 +79,6 @@ function App() {
         autoCorrect="off"
         onChange={onChange}
         value={initInput}
-        style={{
-          height: `${INPUT_HEIGHT}px`,
-          fontSize: `${FONT_SIZE}px`,
-        }}
       />
       {(() => {
         switch (mode) {

@@ -25,11 +25,13 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 - [ ] Setting input for remainder of config items
 - [ ] Lingering TODOs
 - [ ] App styling finalizations (Notably some blue background peeking through the input)
+  - [ ] Document stylesheet configuration setup & DOM structure
 - [ ] Release process for GH & homebrew tap
 - [ ] AppIcon Cache ought to live in it's own config file, given the size makes config editing hard
 
 #### MVP 2: Windows / Linux Support
 
+- [ ] Theming: Carefully evaluate css class names & HTML structure for more options
 - [ ] Selection improvements
   - Selected items should stay selected when search gets more specific. Example:
     - type "dash" (2+ results appear)
@@ -48,15 +50,11 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 
 - [ ] File launcher/finder (fzf/rg?)
   - [ ] Ability to search files and present top N options
-  - [ ] Abililty to open on enter
+  - [ ] Ability to open on enter
   - [ ] Configure paths to search
 
 #### Bonus:
 
-- [ ] Theming/Styling
-  - [ ] Colors
-  - [ ] (More) Font sizes (which means allowing more flexible option sizing)
-  - [ ] Font Style
 - [ ] Configuration KeyBindings: open/hide/up/down/confirm
 - [ ] `Assets.car` support on MacOS for AppIcon resolving
 - [ ] Settings page validation & cleanup

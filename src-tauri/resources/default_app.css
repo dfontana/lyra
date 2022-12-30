@@ -1,0 +1,70 @@
+.lyra-mainRootBox {
+  margin: 0;
+  width: 600px;
+  background: aliceblue;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.appInput {
+  /* TODO: Height & Font refactored to own class given it goes on row elements */
+  height: 38px;
+  font-size: 16px;
+  margin-left: 5px;
+  color: #54e6ae;
+  width: 100%;
+  padding: 0px;
+  border: 0px;
+  outline: none;
+}
+
+.appRoot {
+  width: 100%;
+  height: 100%;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-style: normal;
+  font-family: 'Courier New', Courier, monospace;
+  background: transparent;
+}
+
+.searchResult {
+  /* TODO: Style bookmarks different than searchers */
+  height: 38px;
+  font-size: 16px;
+  color: #54e6ae;
+  display: flex;
+  align-items: center;
+}
+
+.searchResult-icon {
+  margin-left: 5px;
+}
+
+.searchResult-label {
+  margin-left: 5px;
+}
+
+.selected {
+  background-color: #54e6ae;
+  color: aliceblue;
+}
+
+.calcError {
+  background: #ffb3b3;
+  border-radius: 4px;
+  border: 1px solid red;
+  display: inline-block;
+  color: #f00;
+}
+
+.calcResult {
+  height: 38px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+}
