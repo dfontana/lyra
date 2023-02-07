@@ -16,6 +16,7 @@ use config::{Config, Placement, Styles};
 use launcher::Launcher;
 use page::{MainData, Page, SettingsData};
 use plugin_manager::PluginManager;
+use serde_json::json;
 use tauri::{
   http::{Request, Response, ResponseBuilder},
   ActivationPolicy, App, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu,
@@ -87,6 +88,9 @@ fn open_app(page: Page, app: &App, cfg: Arc<Config>) -> Result<(), anyhow::Error
         Ok(false) => {
           if let Err(err) = win.set_focus() {
             info!("Failed to toggle window: {}", err)
+          }
+          if let Err(err) = win.emit("reset-size", json!({})) {
+            info!("Failed to reset state: {}", err);
           }
         }
         Err(err) => {

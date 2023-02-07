@@ -23,11 +23,8 @@ function App() {
   const inputRef = useRef();
   const resetRef = useRef(() => {});
 
-  // TODO: Known bug https://github.com/tauri-apps/tao/issues/434
-  //       if window is resized while hidden it moves. You can try to find a way to solve this by resizing
-  //       after it's un-hidden, but is proving tricky.
   useEffect(() => {
-    // Ensure the window is the rgith starting size
+    // Ensure the window is the rigth starting size
     resetSize()
   }, [resetSize])
 
@@ -55,7 +52,7 @@ function App() {
       // Ensure the window shrinks after leaving modes
       resetSize();
       setMode(MODES.INIT);
-    }
+    } 
   }, [mode, setMode, initInput, resetSize]);
 
   useEffect(() => {
