@@ -18,6 +18,7 @@ impl SkimItem for SkimmableOption {
 pub struct OkAction {
   pub value: Value,
   pub close_win: bool,
+  pub copy: bool,
 }
 
 pub type PluginName = String;

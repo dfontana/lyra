@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{path::PathBuf, str::FromStr, sync::Arc, collections::HashMap};
 
 use anyhow::anyhow;
 use config::{Config, SearchConfig};
@@ -47,7 +47,7 @@ impl Plugin for WebqPlugin {
 
   fn update_config(
     &self,
-    updates: std::collections::HashMap<String, Value>,
+    updates: HashMap<String, Value>,
   ) -> Result<(), anyhow::Error> {
     self.cfg.update(updates)
   }
@@ -86,6 +86,7 @@ impl Plugin for WebqPlugin {
       .map(|_| OkAction {
         value: Value::Null,
         close_win: true,
+        copy: false,
       })
       .map_err(|err| {
         error!("Action failed for {:?}, err: {:?}", data.label, err);

@@ -47,7 +47,9 @@ impl PluginManager {
 
   /// Return all the serialized configs for each plugin so the UI can hydrate settings
   pub fn get_configs(&self) -> HashMap<PluginName, Value> {
-    self.0.iter()
+    self
+      .0
+      .iter()
       .map(|(pn, pl)| (pn.clone(), pl.get_config()))
       .collect()
   }
@@ -65,7 +67,8 @@ impl PluginManager {
       .collect();
 
     if plugs.is_empty() {
-      return self.0.values().collect();
+      // Everything BUT the prefixed items
+      return self.0.values().filter(|pl| pl.prefix().is_none()).collect();
     }
 
     plugs

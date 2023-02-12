@@ -7,6 +7,7 @@ use itertools::Itertools;
 use lyra_plugin::{SkimmableOption, PluginName, OkAction};
 use serde_json::Value;
 use skim::prelude::*;
+use tauri::ClipboardManager;
 use tracing::error;
 
 pub struct Launcher {
@@ -90,14 +91,21 @@ pub async fn search(
 #[tauri::command]
 pub fn submit(
   launcher: tauri::State<'_, Launcher>,
+  app_handle: tauri::AppHandle,
   for_plugin: PluginName,
   selected: Value,
   window: tauri::Window,
 ) -> Result<Value, Value> {
   match launcher.launch(for_plugin, selected) {
+    Ok(OkAction { value, close_win: true, copy: true }) => {
+      app_handle.clipboard_manager().write_text(value.to_string().trim_matches('"')).unwrap();
+      closer::close_win(&window);
+      Ok(value)
+    }
     Ok(OkAction {
       value,
       close_win: true,
+      ..
     }) => {
       closer::close_win(&window);
       Ok(value)

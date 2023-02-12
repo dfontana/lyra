@@ -1944,9 +1944,11 @@ dependencies = [
  "calc",
  "lalrpop-util",
  "lyra-plugin",
+ "parking_lot",
  "serde",
  "serde_json",
  "toml 0.7.1",
+ "tracing",
 ]
 
 [[package]]
