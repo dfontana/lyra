@@ -27,7 +27,7 @@ impl PluginManager {
             Box::new(WebqPlugin::init(&cfg.conf_dir, &cfg.cache_dir)?) as Box<dyn Plugin>
           }
           lyra_plugin_apps::PLUGIN_NAME => {
-            Box::new(AppsPlugin::init(&cfg.conf_dir, &cfg.cache_dir)) as Box<dyn Plugin>
+            Box::new(AppsPlugin::init(&cfg.conf_dir, &cfg.cache_dir)?) as Box<dyn Plugin>
           }
           _ => return Err(anyhow!("{} is an unknown plugin", pn)),
         };

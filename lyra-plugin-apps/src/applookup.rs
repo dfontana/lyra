@@ -4,23 +4,19 @@ use std::{
   sync::Arc,
 };
 
-use crate::config::{AppCache, Config};
+use crate::{
+  config::{AppCache, Config},
+  AppLaunch,
+};
 
 pub struct AppLookup {
-  config: Arc<Config>,
-  cache: Arc<AppCache>,
+  pub config: Arc<Config>,
+  pub cache: Arc<AppCache>,
 }
 
-#[derive(Debug)]
-pub struct App {
-  pub label: String,
-  pub icon: String,
-  pub path: PathBuf,
-}
-
-impl App {
+impl AppLaunch {
   fn from(p: PathBuf, suffix: &str, icon: String) -> Self {
-    App {
+    AppLaunch {
       label: p
         .file_name()
         .expect("Glob returned non-file")
@@ -28,13 +24,12 @@ impl App {
         .trim_end_matches(suffix)
         .to_string(),
       icon,
-      path: p,
+      path: p.to_string_lossy().to_string(),
     }
   }
 }
 
 pub struct AppLookupIter<T> {
-  config: Arc<Config>,
   cache: Arc<AppCache>,
   // Extension to look for in paths
   extension: String,
@@ -46,18 +41,16 @@ pub struct AppLookupIter<T> {
 }
 
 impl AppLookup {
-  pub fn iter(&self) -> AppLookupIter<App> {
+  pub fn iter(&self) -> AppLookupIter<AppLaunch> {
     let conf = self.config.get();
     AppLookupIter {
-      // TODO: Do I need config on this iter or just cache?
-      config: self.config.clone(),
       cache: self.cache.clone(),
       extension: conf.app_extension.clone(),
       paths_remaining: conf.app_paths.clone(),
       current: None,
       maker: Box::new(|p, suffix, cache| {
         let icon = cache.get_app_icon(&p).unwrap_or_default();
-        App::from(p, suffix, icon)
+        AppLaunch::from(p, suffix, icon)
       }),
     }
   }
@@ -66,7 +59,6 @@ impl AppLookup {
     let items = {
       let conf = self.config.get();
       let apps = AppLookupIter {
-        config: self.config.clone(),
         cache: self.cache.clone(),
         extension: conf.app_extension.clone(),
         paths_remaining: conf.app_paths.clone(),

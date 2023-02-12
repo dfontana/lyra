@@ -5,58 +5,122 @@ use std::{
   path::{Path, PathBuf},
 };
 
+use anyhow::{anyhow, Context};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tracing::info;
 
 use crate::convert;
 
+#[derive(Default)]
 pub struct Config {
-  data_dir: PathBuf,
+  conf_file: PathBuf,
   inner: RwLock<InnerConfig>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct InnerConfig {
   pub app_paths: Vec<PathBuf>,
   pub app_extension: String,
 }
 
+#[derive(Default)]
 pub struct AppCache {
-  data_dir: PathBuf,
+  cache_file: PathBuf,
   inner: RwLock<AppCacheInner>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 struct AppCacheInner {
   pub app_icons: HashMap<String, String>,
 }
 
 impl Config {
-  pub fn load(data_dir: PathBuf) -> Self {
-    // TODO: impl actually loading from config file
-    Config {
-      inner: RwLock::new(InnerConfig {
-        app_paths: vec![],
-        app_extension: "t".into(),
-      }),
-      data_dir,
-    }
-  }
-
+  // TODO: These first 3 methods are verbatim copied on every config and the only difference is the
+  //       inner type. This smells like a serious case for a generic
   pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {
     self.inner.read()
+  }
+
+  pub fn load(conf_file: PathBuf) -> Result<Self, anyhow::Error> {
+    let config = if !conf_file.exists() {
+      info!(
+        "Config missing, generating default at {}",
+        conf_file.to_string_lossy()
+      );
+      let config = Self {
+        conf_file,
+        ..Self::default()
+      };
+      config.persist()?;
+      config
+    } else {
+      let inner: InnerConfig = toml::from_str(&fs::read_to_string(&conf_file)?)?;
+      Self {
+        conf_file,
+        inner: RwLock::new(inner),
+      }
+    };
+    Ok(config)
+  }
+
+  fn persist(&self) -> Result<(), anyhow::Error> {
+    fs::write(&self.conf_file, toml::to_string(&*self.inner.read())?)?;
+    Ok(())
+  }
+
+  pub fn update(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
+    for (k, v) in updates {
+      let status = match k.as_ref() {
+        "app_paths" => self.update_paths(&v),
+        "app_extension" => self.update_extension(&v),
+        _ => Err(anyhow!("Unknown field")),
+      };
+      status.context(format!("Field failed operation: {}", k))?;
+    }
+    self.persist()
+  }
+
+  fn update_paths(&self, updated: &Value) -> Result<(), anyhow::Error> {
+    let updated = serde_json::from_value::<Vec<PathBuf>>(updated.clone())?;
+    self.inner.write().app_paths = updated;
+    Ok(())
+  }
+
+  fn update_extension(&self, updated: &Value) -> Result<(), anyhow::Error> {
+    let updated = serde_json::from_value::<String>(updated.clone())?;
+    self.inner.write().app_extension = updated;
+    Ok(())
   }
 }
 
 impl AppCache {
-  pub fn load(data_dir: PathBuf) -> Self {
-    // TODO: impl actually loading from cache file
-    AppCache {
-      inner: RwLock::new(AppCacheInner {
-        app_icons: HashMap::new(),
-      }),
-      data_dir,
-    }
+  pub fn load(file: PathBuf) -> Result<Self, anyhow::Error> {
+    let config = if !file.exists() {
+      info!(
+        "File missing, generating default at {}",
+        file.to_string_lossy()
+      );
+      let item = Self {
+        cache_file: file,
+        ..Self::default()
+      };
+      item.persist()?;
+      item
+    } else {
+      let inner: AppCacheInner = toml::from_str(&fs::read_to_string(&file)?)?;
+      Self {
+        cache_file: file,
+        inner: RwLock::new(inner),
+      }
+    };
+    Ok(config)
+  }
+
+  fn persist(&self) -> Result<(), anyhow::Error> {
+    fs::write(&self.cache_file, toml::to_string(&*self.inner.read())?)?;
+    Ok(())
   }
 
   pub fn get_app_icon(&self, updated: &Path) -> Result<String, anyhow::Error> {
@@ -94,13 +158,5 @@ impl AppCache {
     };
     self.inner.write().app_icons = new_app_icons;
     self.persist()
-  }
-
-  fn persist(&self) -> Result<(), anyhow::Error> {
-    fs::write(
-      &self.data_dir.join(".cache"),
-      toml::to_string(&*self.inner.read())?,
-    )?;
-    Ok(())
   }
 }

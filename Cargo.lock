@@ -1928,6 +1928,7 @@ dependencies = [
  "glob",
  "icns",
  "lyra-plugin",
+ "open",
  "parking_lot",
  "plist",
  "serde",

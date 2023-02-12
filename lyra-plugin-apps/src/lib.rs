@@ -1,7 +1,12 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
+use anyhow::Context;
+use applookup::AppLookup;
+use config::{AppCache, Config};
 use lyra_plugin::{OkAction, Plugin, SkimmableOption};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::error;
 
 mod applookup;
 mod config;
@@ -9,62 +14,74 @@ mod convert;
 
 pub const PLUGIN_NAME: &'static str = "apps";
 
-pub struct AppsPlugin {}
+pub struct AppsPlugin {
+  cfg: Arc<Config>,
+  apps: AppLookup,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AppLaunch {
+  pub label: String,
+  pub icon: String,
+  pub path: String,
+}
 
 impl AppsPlugin {
-  pub fn init(conf_dir: &PathBuf, cache_dir: &PathBuf) -> Self {
-    todo!()
+  pub fn init(conf_dir: &PathBuf, cache_dir: &PathBuf) -> Result<Self, anyhow::Error> {
+    let cfg = Arc::new(Config::load(
+      conf_dir.join(format!("{}.toml", PLUGIN_NAME)),
+    )?);
+    let cache = AppCache::load(cache_dir.join(format!("app_icons.tml")))?;
+    let apps = AppLookup {
+      config: cfg.clone(),
+      cache: Arc::new(cache),
+    };
+    apps.init().context("Failed to initialize app icons")?;
+    Ok(AppsPlugin { cfg, apps })
   }
 }
 
 impl Plugin for AppsPlugin {
+  fn get_config(&self) -> Value {
+    serde_json::to_value((*self.cfg.get()).clone()).unwrap()
+  }
+
   fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
-    todo!()
+    self.cfg.update(updates)
   }
 
   fn action(&self, input: Value) -> Result<OkAction, Value> {
-    // TODO: `input` needs to be deserialized for this plugin (right now it's a SearchOption)
-    //       The sourced plugin can then execute it's action; which previously looked like this:
-    //          let url = self.config.get_url(&selected)?;
-    //          open::that(url)?;
-    //       Except for calc, we'll instead run the eval method in there
-    todo!("Blanket impl for now, should delete once something works")
+    let data: AppLaunch = match serde_json::from_value(input) {
+      Ok(s) => s,
+      Err(err) => {
+        error!("Failed to parse AppLaunch from input: {:?}", err);
+        return Err(Value::Null);
+      }
+    };
+
+    open::that(data.path.clone())
+      .map(|_| OkAction {
+        value: Value::Null,
+        close_win: true,
+        copy: false,
+      })
+      .map_err(|err| {
+        error!("Action failed for {:?}, err: {:?}", data.label, err);
+        Value::Null
+      })
   }
 
-  fn skim(&self, search: &str) -> Vec<SkimmableOption> {
-    // TODO: Delete this once every plugin impled to prevent compile issues
-    todo!("Blanket impl for now, should delete once something works")
-  }
-
-  fn get_config(&self) -> Value {
-    todo!()
+  fn skim(&self, _: &str) -> Vec<SkimmableOption> {
+    self.apps.iter().map(AppLaunch::into).collect()
   }
 }
 
-// TODO: impl
-// #[derive(Debug, Deserialize, Serialize)]
-// pub struct AppOption {
-//   pub rank: i32,
-//   pub label: String,
-//   pub icon: String,
-//   pub path: String,
-// }
-
-// impl From<App> for SearchOption {
-//   fn from(app: App) -> SearchOption {
-//     SearchOption::App(AppOption {
-//       rank: 0,
-//       label: app.label.clone(),
-//       path: app.path.to_string_lossy().to_string(),
-//       icon: app.icon.clone(),
-//     })
-//   }
-// }
-
-// pub fn get_url(&self, opt: &SearchOption) -> Result<String, anyhow::Error> {
-// SearchOption::App(data) => Ok(data.path.clone()),
-
-// Skim Item
-//  SearchOption::App(d) => d.label.as_str()
-// built from
-//  .chain(self.apps.iter().map(App::into))
+impl From<AppLaunch> for SkimmableOption {
+  fn from(app: AppLaunch) -> SkimmableOption {
+    SkimmableOption {
+      value: serde_json::to_value(&app).unwrap(),
+      skim: Arc::new(app.label.clone()),
+      source: PLUGIN_NAME.to_string(),
+    }
+  }
+}

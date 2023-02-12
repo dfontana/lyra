@@ -56,14 +56,20 @@ function Search({ inputRef, resetRef, search }) {
   const [selection, resetNav] = useNavigation({
     results,
     onSubmit: (selection) => {
-      let isCalc = results?.[selection]?.[0] === 'calc';
       let pair = results?.[selection];
+      if (!pair) {
+        // There's nothing to action on
+        return;
+      }
+      let [pluginName, pluginValue] = results[selection];
       let selected = null;
-      if (isCalc) {
+      if (pluginName === 'calc') {
         selected = pair[1].Ok;
+      } else if (pluginName === 'apps') {
+        selected = pair[1];
       } else if (templateState === TEMPLATE_COMPLETED) {
-        let args = extractArgs(pair[1], search);
-        selected = { ...pair[1], args };
+        let args = extractArgs(pluginValue, search);
+        selected = { ...pluginValue, args };
       } else {
         // TODO: UI - We don't have access to setSearch so I can't force a space
         //       if there isn't one yet. Ideally we can do this or just better model
@@ -97,6 +103,10 @@ function Search({ inputRef, resetRef, search }) {
         }
         break;
       case TEMPLATE_COMPLETED:
+        // TODO: Bookmarks (eg templates with no args) prevent searches since it sets
+        //       state to template completed. We don't want to allow searching during this
+        //       phase still, as that can cause movement for actual templates.
+        //       Perhaps an empty completed vs non-empty completed will let us change behaviors?
         if (!isTemplatingComplete(results?.[selection], search)) {
           setTemplateState(TEMPLATE_STARTED);
         }
@@ -151,7 +161,9 @@ function Search({ inputRef, resetRef, search }) {
     <>
       {results.map(([pl, v], idx) => {
         switch (pl) {
-          case 'webq':
+          case 'calc':
+            return <CalcResult key="calc" result={v?.Ok} error={v?.Err} expression={search} />;
+          default:
             return (
               <SearchResult
                 key={v.label}
@@ -161,10 +173,6 @@ function Search({ inputRef, resetRef, search }) {
                 selected={idx === selection}
               />
             );
-          case 'calc':
-            return <CalcResult key="calc" result={v?.Ok} error={v?.Err} expression={search} />;
-          default:
-            return <></>;
         }
       })}
     </>
