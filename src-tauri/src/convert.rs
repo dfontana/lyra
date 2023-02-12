@@ -1,8 +1,8 @@
 use anyhow::anyhow;
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::engine::Engine as _;
 use reqwest::header::CONTENT_TYPE;
 use tracing::{error, info};
-use base64::engine::Engine as _;
-use base64::engine::general_purpose::STANDARD as BASE64;
 
 async fn convert_image(url: String) -> Result<String, anyhow::Error> {
   let resp = reqwest::get(url).await?;

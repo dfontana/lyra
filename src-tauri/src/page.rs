@@ -66,7 +66,10 @@ impl SettingsDataBuilder {
     map.insert("IMAGE_TO_DATA".into(), "image_data_url".into());
     map.insert("GET_CONFIG".into(), "get_config".into());
     map.insert("SAVE_PLUGIN_SETTINGS".into(), "save_plugin_settings".into());
-    map.insert("VALIDATE_PLUGIN_VALUE".into(), "validate_plugin_value".into());
+    map.insert(
+      "VALIDATE_PLUGIN_VALUE".into(),
+      "validate_plugin_value".into(),
+    );
     map
   }
 }

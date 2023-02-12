@@ -21,7 +21,7 @@ impl PluginManager {
       .map(|pn| {
         let pl = match pn.as_ref() {
           lyra_plugin_calc::PLUGIN_NAME => {
-            Box::new(CalcPlugin::init(&cfg.conf_dir, &cfg.cache_dir)) as Box<dyn Plugin>
+            Box::new(CalcPlugin::init(&cfg.conf_dir, &cfg.cache_dir)?) as Box<dyn Plugin>
           }
           lyra_plugin_webq::PLUGIN_NAME => {
             Box::new(WebqPlugin::init(&cfg.conf_dir, &cfg.cache_dir)?) as Box<dyn Plugin>

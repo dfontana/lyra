@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr, sync::Arc, collections::HashMap};
+use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::anyhow;
 use config::{Config, SearchConfig};
@@ -45,10 +45,7 @@ impl Plugin for WebqPlugin {
     serde_json::to_value((*self.cfg.get()).clone()).unwrap()
   }
 
-  fn update_config(
-    &self,
-    updates: HashMap<String, Value>,
-  ) -> Result<(), anyhow::Error> {
+  fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
     self.cfg.update(updates)
   }
 

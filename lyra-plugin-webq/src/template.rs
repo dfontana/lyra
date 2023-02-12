@@ -63,7 +63,7 @@ impl FromStr for Template {
             return Err(TemplateError::InvalidFormat(
               "Missing closing marker: }".into(),
             ));
-          } 
+          }
           state = State::Opened;
         }
         '}' => {

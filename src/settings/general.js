@@ -13,7 +13,7 @@ export default function General({ initialConfig }) {
   //      (eg this is always defaulting)
 
   const saveForm = useCallback(() => {
-    setToast({text: 'Not impled', type: 'error', delay: 10000});
+    setToast({ text: 'Not impled', type: 'error', delay: 10000 });
     // invoke(SAVE_..., { updates: ... })
     //   .then(() => setToast({ text: 'Saved!', type: 'success' }))
     //   .catch((err) => setToast({ text: `Error: ${err}`, type: 'error', delay: 10000 }));

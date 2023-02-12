@@ -1,13 +1,13 @@
-import React from 'react'
-import General from './general'
-import SearcherManager from './searchermanager'
-import useHydration from './useHydration'
-import { GeistProvider, CssBaseline, Page, Tabs, Loading } from '@geist-ui/core'
+import React from 'react';
+import General from './general';
+import SearcherManager from './searchermanager';
+import useHydration from './useHydration';
+import { GeistProvider, CssBaseline, Page, Tabs, Loading } from '@geist-ui/core';
 
-const { GET_CONFIG } = window.__LYRA__.calls
+const { GET_CONFIG } = window.__LYRA__.calls;
 
 export default function Settings() {
-  const [isConfigLoading, config] = useHydration(GET_CONFIG)
+  const [isConfigLoading, config] = useHydration(GET_CONFIG);
 
   return (
     <GeistProvider>
@@ -16,12 +16,12 @@ export default function Settings() {
         {isConfigLoading ? (
           <Loading>Loading</Loading>
         ) : (
-          <Tabs initialValue='1'>
-            <Tabs.Item label='general' value='1'>
+          <Tabs initialValue="1">
+            <Tabs.Item label="general" value="1">
               <General initialConfig={config.general} />
             </Tabs.Item>
             {config?.webq && (
-              <Tabs.Item label='webq' value='2'>
+              <Tabs.Item label="webq" value="2">
                 <SearcherManager initialConfig={config.webq} />
               </Tabs.Item>
             )}
@@ -29,5 +29,5 @@ export default function Settings() {
         )}
       </Page>
     </GeistProvider>
-  )
+  );
 }

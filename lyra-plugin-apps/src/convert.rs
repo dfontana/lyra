@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Context};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::engine::Engine as _;
 use icns::IconFamily;
 use plist::Value;
 use std::{fs::File, io::BufReader, path::Path};
-use base64::engine::Engine as _;
-use base64::engine::general_purpose::STANDARD as BASE64;
 
 pub fn to_icon(p: &Path) -> Result<String, anyhow::Error> {
   let icns = Value::from_file(p.join("Contents/info.plist"))

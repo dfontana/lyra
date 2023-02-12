@@ -1,18 +1,11 @@
 use crate::plugin_manager::PluginManager;
 use anyhow::Context;
+use lyra_plugin::PluginName;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{
-  collections::HashMap,
-  fs,
-  ops::Deref,
-  path::PathBuf,
-  sync::Arc,
-};
+use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
 use tracing::{error, info};
-use lyra_plugin::PluginName;
-
 
 #[derive(Debug, Default)]
 pub struct Config {
@@ -88,7 +81,6 @@ pub fn init_home() -> Result<(PathBuf, PathBuf), anyhow::Error> {
 }
 
 impl Config {
-
   pub fn get_or_init_config() -> Result<Config, anyhow::Error> {
     let (conf_dir, cache_dir) = init_home()?;
     let conf_file = conf_dir.join("config.toml");
@@ -171,10 +163,13 @@ impl Config {
 #[tauri::command]
 pub fn get_config(
   plugin_manager: tauri::State<'_, PluginManager>,
-  config: tauri::State<Arc<Config>>
+  config: tauri::State<Arc<Config>>,
 ) -> HashMap<String, Value> {
   let mut configs = plugin_manager.get_configs().clone();
-  configs.insert("general".to_string(), serde_json::to_value(config.get().clone()).unwrap());
+  configs.insert(
+    "general".to_string(),
+    serde_json::to_value(config.get().clone()).unwrap(),
+  );
   configs
 }
 

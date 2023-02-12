@@ -1,12 +1,11 @@
-use std::{path::PathBuf, collections::HashMap};
+use std::{collections::HashMap, path::PathBuf};
 
-use lyra_plugin::{Plugin, OkAction, SkimmableOption};
+use lyra_plugin::{OkAction, Plugin, SkimmableOption};
 use serde_json::Value;
 
 mod applookup;
 mod config;
 mod convert;
-
 
 pub const PLUGIN_NAME: &'static str = "apps";
 
@@ -37,9 +36,9 @@ impl Plugin for AppsPlugin {
     todo!("Blanket impl for now, should delete once something works")
   }
 
-fn get_config(&self) -> Value {
-        todo!()
-    }
+  fn get_config(&self) -> Value {
+    todo!()
+  }
 }
 
 // TODO: impl

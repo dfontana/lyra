@@ -1,10 +1,6 @@
-use crate::{
-  closer,
-  config::Config,
-  plugin_manager::PluginManager,
-};
+use crate::{closer, config::Config, plugin_manager::PluginManager};
 use itertools::Itertools;
-use lyra_plugin::{SkimmableOption, PluginName, OkAction};
+use lyra_plugin::{OkAction, PluginName, SkimmableOption};
 use serde_json::Value;
 use skim::prelude::*;
 use tauri::ClipboardManager;
@@ -46,8 +42,9 @@ impl Launcher {
       .filter_map(|sk| fuzzy_engine.match_item(sk.clone()).map(|mr| (sk, mr)))
       .sorted_by_cached_key(|(_, mr)| mr.rank.iter().sum::<i32>())
       .take(self.config.get().result_count)
-      .map(|(sk, _)| { 
-        (*sk).as_any()
+      .map(|(sk, _)| {
+        (*sk)
+          .as_any()
           .downcast_ref::<SkimmableOption>()
           .unwrap()
           .clone()
@@ -57,7 +54,7 @@ impl Launcher {
           .plugins
           .always_present(search)
           .iter()
-          .flat_map(|pl| pl.static_items())
+          .flat_map(|pl| pl.static_items()),
       )
       .collect()
   }
@@ -97,8 +94,15 @@ pub fn submit(
   window: tauri::Window,
 ) -> Result<Value, Value> {
   match launcher.launch(for_plugin, selected) {
-    Ok(OkAction { value, close_win: true, copy: true }) => {
-      app_handle.clipboard_manager().write_text(value.to_string().trim_matches('"')).unwrap();
+    Ok(OkAction {
+      value,
+      close_win: true,
+      copy: true,
+    }) => {
+      app_handle
+        .clipboard_manager()
+        .write_text(value.to_string().trim_matches('"'))
+        .unwrap();
       closer::close_win(&window);
       Ok(value)
     }

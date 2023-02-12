@@ -1,6 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
 use serde_json::Value;
 use skim::SkimItem;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone)]
 pub struct SkimmableOption {
@@ -10,9 +10,9 @@ pub struct SkimmableOption {
 }
 
 impl SkimItem for SkimmableOption {
-    fn text(&self) -> std::borrow::Cow<str> {
-        self.skim.text()
-    }
+  fn text(&self) -> std::borrow::Cow<str> {
+    self.skim.text()
+  }
 }
 
 pub struct OkAction {
@@ -41,24 +41,24 @@ pub trait Plugin: Send + Sync {
   }
 
   /// The Unique Prefix that identifies this plugin, if any at all. For example, a calculator might
-  /// prefix itself by having the user type '=' first. But other plugins like app launching or 
+  /// prefix itself by having the user type '=' first. But other plugins like app launching or
   /// web searching will have no prefix to trigger their behavior (it just happens naturally)
   fn prefix(&self) -> Option<String> {
     None
   }
 
   /// Execute this plugin against the given input (specific to this plugin). This plugin
-  /// will have to deserialize the value to determine what to do with it. If there's an issue 
+  /// will have to deserialize the value to determine what to do with it. If there's an issue
   /// executing this action a serializable error can be returned (like for Calc this will be)
   /// an object the UI can parse, but for others it might be nothing or just a String.
   ///
   /// Plugins can choose to close the window after they are done executing by setting the boolean
   /// in the returned OkAction.
-  fn action(&self, input: Value) -> Result<OkAction, Value>; 
+  fn action(&self, input: Value) -> Result<OkAction, Value>;
 
   /// This is the options a plugin wants to contribute based on the given search string. Note this won't
   /// have anything like a prefix on the value, so bear that in mind - it's safe to interpret as is.
-  fn skim(&self, search: &str) -> Vec<SkimmableOption>; 
+  fn skim(&self, search: &str) -> Vec<SkimmableOption>;
 
   /// Indicates this plugin has static items it wants to always contribute such as the WebQ plugin,
   /// which always wants to affix serching the web.
@@ -69,6 +69,6 @@ pub trait Plugin: Send + Sync {
   /// Any options that should always be present in the search reguardless of the search should come from
   /// here. This will affix them after skimming.
   fn static_items(&self) -> Vec<SkimmableOption> {
-    vec![] 
+    vec![]
   }
 }
