@@ -1913,10 +1913,12 @@ name = "lyra-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "parking_lot",
  "serde",
  "serde_json",
  "skim",
  "toml 0.5.10",
+ "tracing",
 ]
 
 [[package]]

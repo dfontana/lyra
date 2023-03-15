@@ -5,12 +5,12 @@ use std::{
 };
 
 use crate::{
-  config::{AppCache, Config},
+  config::{AppCache, AppConf},
   AppLaunch,
 };
 
 pub struct AppLookup {
-  pub config: Arc<Config>,
+  pub config: Arc<AppConf>,
   pub cache: Arc<AppCache>,
 }
 
@@ -42,7 +42,7 @@ pub struct AppLookupIter<T> {
 
 impl AppLookup {
   pub fn iter(&self) -> AppLookupIter<AppLaunch> {
-    let conf = self.config.get();
+    let conf = self.config.0.get();
     AppLookupIter {
       cache: self.cache.clone(),
       extension: conf.app_extension.clone(),
@@ -57,7 +57,7 @@ impl AppLookup {
 
   pub fn init(&self) -> Result<(), anyhow::Error> {
     let items = {
-      let conf = self.config.get();
+      let conf = self.config.0.get();
       let apps = AppLookupIter {
         cache: self.cache.clone(),
         extension: conf.app_extension.clone(),

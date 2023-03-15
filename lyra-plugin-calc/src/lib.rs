@@ -3,8 +3,8 @@ mod config;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use calc::Context;
-use config::Config;
-use lyra_plugin::{OkAction, Plugin, SkimmableOption};
+use config::CalcConf;
+use lyra_plugin::{Config, OkAction, Plugin, SkimmableOption};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -18,13 +18,13 @@ pub struct CalcError {
 pub const PLUGIN_NAME: &'static str = "calc";
 
 pub struct CalcPlugin {
-  cfg: Config,
+  cfg: CalcConf,
 }
 
 impl CalcPlugin {
   pub fn init(conf_dir: &PathBuf, _: &PathBuf) -> Result<Self, anyhow::Error> {
     let cfg = Config::load(conf_dir.join(format!("{}.toml", PLUGIN_NAME)))?;
-    Ok(CalcPlugin { cfg })
+    Ok(CalcPlugin { cfg: CalcConf(cfg) })
   }
 
   fn eval(&self, search_input: &str) -> Result<Value, Value> {
@@ -78,7 +78,7 @@ impl CalcPlugin {
 
 impl Plugin for CalcPlugin {
   fn get_config(&self) -> Value {
-    serde_json::to_value((*self.cfg.get()).clone()).unwrap()
+    serde_json::to_value((*self.cfg.0.get()).clone()).unwrap()
   }
 
   fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
@@ -86,7 +86,7 @@ impl Plugin for CalcPlugin {
   }
 
   fn prefix(&self) -> Option<String> {
-    Some(self.cfg.get().prefix.clone())
+    Some(self.cfg.0.get().prefix.clone())
   }
 
   fn action(&self, input: Value) -> Result<OkAction, Value> {

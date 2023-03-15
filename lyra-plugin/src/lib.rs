@@ -1,3 +1,7 @@
+mod config;
+
+pub use config::*;
+
 use serde_json::Value;
 use skim::SkimItem;
 use std::{collections::HashMap, sync::Arc};

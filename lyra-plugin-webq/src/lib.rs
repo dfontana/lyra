@@ -1,8 +1,8 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::anyhow;
-use config::{Config, SearchConfig};
-use lyra_plugin::{OkAction, Plugin, SkimmableOption};
+use config::{SearchConfig, WebqConf};
+use lyra_plugin::{Config, OkAction, Plugin, SkimmableOption};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use template::Template;
@@ -21,7 +21,7 @@ pub const PLUGIN_NAME: &'static str = "webq";
 ///   3. A "bookmark" which is just a template that has no arguments
 /// All of this should be generalizable over the first case, hence the single plugin
 pub struct WebqPlugin {
-  cfg: Config,
+  cfg: WebqConf,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -36,13 +36,13 @@ pub struct Searcher {
 impl WebqPlugin {
   pub fn init(conf_dir: &PathBuf, _: &PathBuf) -> Result<Self, anyhow::Error> {
     let cfg = Config::load(conf_dir.join(format!("{}.toml", PLUGIN_NAME)))?;
-    Ok(WebqPlugin { cfg })
+    Ok(WebqPlugin { cfg: WebqConf(cfg) })
   }
 }
 
 impl Plugin for WebqPlugin {
   fn get_config(&self) -> Value {
-    serde_json::to_value((*self.cfg.get()).clone()).unwrap()
+    serde_json::to_value((*self.cfg.0.get()).clone()).unwrap()
   }
 
   fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
@@ -66,7 +66,7 @@ impl Plugin for WebqPlugin {
         return Err(Value::Null);
       }
     };
-    let cfg = self.cfg.get();
+    let cfg = self.cfg.0.get();
     cfg
       .searchers
       .get(&data.label)
@@ -94,6 +94,7 @@ impl Plugin for WebqPlugin {
   fn skim(&self, _: &str) -> Vec<lyra_plugin::SkimmableOption> {
     self
       .cfg
+      .0
       .get()
       .searchers
       .iter()
@@ -106,7 +107,7 @@ impl Plugin for WebqPlugin {
   }
 
   fn static_items(&self) -> Vec<lyra_plugin::SkimmableOption> {
-    match &self.cfg.get().default_searcher {
+    match &self.cfg.0.get().default_searcher {
       Some(sh) => vec![sh.into()],
       None => vec![],
     }

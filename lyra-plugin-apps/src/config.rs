@@ -1,11 +1,11 @@
 use std::{
   collections::HashMap,
   fs,
-  ops::Deref,
   path::{Path, PathBuf},
 };
 
 use anyhow::{anyhow, Context};
+use lyra_plugin::Config;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,11 +13,7 @@ use tracing::info;
 
 use crate::convert;
 
-#[derive(Default)]
-pub struct Config {
-  conf_file: PathBuf,
-  inner: RwLock<InnerConfig>,
-}
+pub struct AppConf(pub Config<InnerConfig>);
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct InnerConfig {
@@ -36,40 +32,7 @@ struct AppCacheInner {
   pub app_icons: HashMap<String, String>,
 }
 
-impl Config {
-  // TODO: These first 3 methods are verbatim copied on every config and the only difference is the
-  //       inner type. This smells like a serious case for a generic
-  pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {
-    self.inner.read()
-  }
-
-  pub fn load(conf_file: PathBuf) -> Result<Self, anyhow::Error> {
-    let config = if !conf_file.exists() {
-      info!(
-        "Config missing, generating default at {}",
-        conf_file.to_string_lossy()
-      );
-      let config = Self {
-        conf_file,
-        ..Self::default()
-      };
-      config.persist()?;
-      config
-    } else {
-      let inner: InnerConfig = toml::from_str(&fs::read_to_string(&conf_file)?)?;
-      Self {
-        conf_file,
-        inner: RwLock::new(inner),
-      }
-    };
-    Ok(config)
-  }
-
-  fn persist(&self) -> Result<(), anyhow::Error> {
-    fs::write(&self.conf_file, toml::to_string(&*self.inner.read())?)?;
-    Ok(())
-  }
-
+impl AppConf {
   pub fn update(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
     for (k, v) in updates {
       let status = match k.as_ref() {
@@ -79,18 +42,18 @@ impl Config {
       };
       status.context(format!("Field failed operation: {}", k))?;
     }
-    self.persist()
+    self.0.persist()
   }
 
   fn update_paths(&self, updated: &Value) -> Result<(), anyhow::Error> {
     let updated = serde_json::from_value::<Vec<PathBuf>>(updated.clone())?;
-    self.inner.write().app_paths = updated;
+    self.0.inner.write().app_paths = updated;
     Ok(())
   }
 
   fn update_extension(&self, updated: &Value) -> Result<(), anyhow::Error> {
     let updated = serde_json::from_value::<String>(updated.clone())?;
-    self.inner.write().app_extension = updated;
+    self.0.inner.write().app_extension = updated;
     Ok(())
   }
 }

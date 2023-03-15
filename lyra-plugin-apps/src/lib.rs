@@ -2,8 +2,8 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 use applookup::AppLookup;
-use config::{AppCache, Config};
-use lyra_plugin::{OkAction, Plugin, SkimmableOption};
+use config::{AppCache, AppConf};
+use lyra_plugin::{Config, OkAction, Plugin, SkimmableOption};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::error;
@@ -15,7 +15,7 @@ mod convert;
 pub const PLUGIN_NAME: &'static str = "apps";
 
 pub struct AppsPlugin {
-  cfg: Arc<Config>,
+  cfg: Arc<AppConf>,
   apps: AppLookup,
 }
 
@@ -28,9 +28,9 @@ pub struct AppLaunch {
 
 impl AppsPlugin {
   pub fn init(conf_dir: &PathBuf, cache_dir: &PathBuf) -> Result<Self, anyhow::Error> {
-    let cfg = Arc::new(Config::load(
+    let cfg = Arc::new(AppConf(Config::load(
       conf_dir.join(format!("{}.toml", PLUGIN_NAME)),
-    )?);
+    )?));
     let cache = AppCache::load(cache_dir.join(format!("app_icons.tml")))?;
     let apps = AppLookup {
       config: cfg.clone(),
@@ -43,7 +43,7 @@ impl AppsPlugin {
 
 impl Plugin for AppsPlugin {
   fn get_config(&self) -> Value {
-    serde_json::to_value((*self.cfg.get()).clone()).unwrap()
+    serde_json::to_value((*self.cfg.0.get()).clone()).unwrap()
   }
 
   fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
