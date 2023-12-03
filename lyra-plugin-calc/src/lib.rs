@@ -4,7 +4,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use calc::Context;
 use config::CalcConf;
-use lyra_plugin::{Config, OkAction, Plugin, SkimmableOption};
+use lyra_plugin::{Config, FuzzyMatchItem, OkAction, Plugin};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -97,10 +97,10 @@ impl Plugin for CalcPlugin {
     })
   }
 
-  fn skim(&self, search: &str) -> Vec<SkimmableOption> {
-    vec![SkimmableOption {
+  fn options(&self, search: &str) -> Vec<FuzzyMatchItem> {
+    vec![FuzzyMatchItem {
       value: serde_json::to_value(self.eval(search)).unwrap(),
-      skim: Arc::new(search.to_owned()),
+      against: Arc::new(search.to_owned()),
       source: PLUGIN_NAME.to_string(),
     }]
   }

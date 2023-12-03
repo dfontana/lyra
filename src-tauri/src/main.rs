@@ -199,10 +199,7 @@ fn main() {
     })
     .manage(config.clone())
     .manage(plugin_manager.clone())
-    .manage(Launcher {
-      config,
-      plugins: plugin_manager,
-    })
+    .manage(Launcher::new(config, plugin_manager))
     .invoke_handler(tauri::generate_handler![
       closer::close,
       convert::image_data_url,

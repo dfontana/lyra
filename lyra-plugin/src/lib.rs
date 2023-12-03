@@ -3,19 +3,24 @@ mod config;
 pub use config::*;
 
 use serde_json::Value;
-use skim::SkimItem;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt, sync::Arc};
 
 #[derive(Clone)]
-pub struct SkimmableOption {
+pub struct FuzzyMatchItem {
   pub value: Value,
-  pub skim: Arc<dyn SkimItem>,
+  pub against: Arc<dyn AsRef<str>>,
   pub source: PluginName,
 }
 
-impl SkimItem for SkimmableOption {
-  fn text(&self) -> std::borrow::Cow<str> {
-    self.skim.text()
+impl AsRef<str> for FuzzyMatchItem {
+  fn as_ref(&self) -> &str {
+    self.against.as_ref().as_ref()
+  }
+}
+
+impl fmt::Debug for FuzzyMatchItem {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "against:{:?},source:{:?}", self.as_ref(), self.source)
   }
 }
 
@@ -62,7 +67,7 @@ pub trait Plugin: Send + Sync {
 
   /// This is the options a plugin wants to contribute based on the given search string. Note this won't
   /// have anything like a prefix on the value, so bear that in mind - it's safe to interpret as is.
-  fn skim(&self, search: &str) -> Vec<SkimmableOption>;
+  fn options(&self, search: &str) -> Vec<FuzzyMatchItem>;
 
   /// Indicates this plugin has static items it wants to always contribute such as the WebQ plugin,
   /// which always wants to affix serching the web.
@@ -71,8 +76,8 @@ pub trait Plugin: Send + Sync {
   }
 
   /// Any options that should always be present in the search reguardless of the search should come from
-  /// here. This will affix them after skimming.
-  fn static_items(&self) -> Vec<SkimmableOption> {
+  /// here. This will affix them after fuzzy matching.
+  fn static_items(&self) -> Vec<FuzzyMatchItem> {
     vec![]
   }
 }

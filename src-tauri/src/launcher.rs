@@ -1,54 +1,51 @@
+use std::sync::Arc;
+
 use crate::{closer, config::Config, plugin_manager::PluginManager};
-use itertools::Itertools;
-use lyra_plugin::{OkAction, PluginName, SkimmableOption};
+use lyra_plugin::{FuzzyMatchItem, OkAction, PluginName};
+use nucleo_matcher::{
+  pattern::{CaseMatching, Pattern},
+  Config as NucleoConfig, Matcher,
+};
+use parking_lot::RwLock;
 use serde_json::Value;
-use skim::prelude::*;
 use tauri::ClipboardManager;
 use tracing::error;
 
 pub struct Launcher {
   pub config: Arc<Config>,
   pub plugins: PluginManager,
+  matcher: RwLock<Matcher>,
 }
 
 impl Launcher {
-  fn options_to_receiver(&self, search: &str) -> SkimItemReceiver {
-    let (tx_items, rx_items): (SkimItemSender, SkimItemReceiver) = unbounded();
-    self
-      .plugins
-      .filter_to(&search)
-      .iter()
-      .flat_map(|pl| pl.skim(search))
-      .for_each(|sk| {
-        let _ = tx_items.send(Arc::new(sk.clone()));
-      });
-    drop(tx_items); // indicates that all items have been sent
-    rx_items
+  pub fn new(config: Arc<Config>, plugins: PluginManager) -> Self {
+    let mut cfg = NucleoConfig::DEFAULT;
+    cfg.ignore_case = true;
+    cfg.prefer_prefix = true;
+    Launcher {
+      config,
+      plugins,
+      matcher: RwLock::new(Matcher::new(cfg)),
+    }
   }
-
-  pub async fn get_options(&self, search: &str) -> Vec<SkimmableOption> {
+  pub async fn get_options(&self, search: &str) -> Vec<FuzzyMatchItem> {
     if search.is_empty() {
       // Special case, empty string == nothing back instead of everything
       return Vec::new();
     }
-    let fuzzy_engine = ExactOrFuzzyEngineFactory::builder()
-      .exact_mode(false)
-      .fuzzy_algorithm(FuzzyAlgorithm::SkimV2)
-      .build()
-      .create_engine_with_case(search, CaseMatching::Smart);
-    let receiver = self.options_to_receiver(search);
-    receiver
+
+    Pattern::parse(search, CaseMatching::Ignore)
+      .match_list(
+        self
+          .plugins
+          .filter_to(&search)
+          .iter()
+          .flat_map(|pl| pl.options(search)),
+        &mut *self.matcher.write(),
+      )
       .iter()
-      .filter_map(|sk| fuzzy_engine.match_item(sk.clone()).map(|mr| (sk, mr)))
-      .sorted_by_cached_key(|(_, mr)| mr.rank.iter().sum::<i32>())
       .take(self.config.get().result_count)
-      .map(|(sk, _)| {
-        (*sk)
-          .as_any()
-          .downcast_ref::<SkimmableOption>()
-          .unwrap()
-          .clone()
-      })
+      .map(|(v, _)| v.to_owned())
       .chain(
         self
           .plugins
