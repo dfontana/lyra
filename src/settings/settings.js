@@ -1,5 +1,4 @@
 import React from 'react';
-import BookmarkletManager from './bookmarkletmanager';
 import General from './general';
 import SearcherManager from './searchermanager';
 import useHydration from './useHydration';
@@ -19,15 +18,13 @@ export default function Settings() {
         ) : (
           <Tabs initialValue="1">
             <Tabs.Item label="general" value="1">
-              <General initialConfig={config} />
+              <General initialConfig={config.general} />
             </Tabs.Item>
-
-            <Tabs.Item label="bookmarks" value="2">
-              <BookmarkletManager initialConfig={config} />
-            </Tabs.Item>
-            <Tabs.Item label="searchers" value="3">
-              <SearcherManager initialConfig={config} />
-            </Tabs.Item>
+            {config?.webq && (
+              <Tabs.Item label="webq" value="2">
+                <SearcherManager initialConfig={config.webq} />
+              </Tabs.Item>
+            )}
           </Tabs>
         )}
       </Page>

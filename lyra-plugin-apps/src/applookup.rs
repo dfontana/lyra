@@ -1,24 +1,22 @@
-use crate::config::Config;
 use glob::glob;
 use std::{
   path::{Path, PathBuf},
   sync::Arc,
 };
 
+use crate::{
+  config::{AppCache, AppConf},
+  AppLaunch,
+};
+
 pub struct AppLookup {
-  config: Arc<Config>,
+  pub config: Arc<AppConf>,
+  pub cache: Arc<AppCache>,
 }
 
-#[derive(Debug)]
-pub struct App {
-  pub label: String,
-  pub icon: String,
-  pub path: PathBuf,
-}
-
-impl App {
+impl AppLaunch {
   fn from(p: PathBuf, suffix: &str, icon: String) -> Self {
-    App {
+    AppLaunch {
       label: p
         .file_name()
         .expect("Glob returned non-file")
@@ -26,46 +24,42 @@ impl App {
         .trim_end_matches(suffix)
         .to_string(),
       icon,
-      path: p,
+      path: p.to_string_lossy().to_string(),
     }
   }
 }
 
 pub struct AppLookupIter<T> {
-  config: Arc<Config>,
+  cache: Arc<AppCache>,
   // Extension to look for in paths
   extension: String,
   // Remaining paths to inspect during iteration
   paths_remaining: Vec<PathBuf>,
   // Current glob being iterated over
   current: Option<glob::Paths>,
-  maker: Box<dyn Fn(PathBuf, &str, Arc<Config>) -> T>,
+  maker: Box<dyn Fn(PathBuf, &str, Arc<AppCache>) -> T>,
 }
 
 impl AppLookup {
-  pub fn new(config: Arc<Config>) -> Self {
-    AppLookup { config }
-  }
-
-  pub fn iter(&self) -> AppLookupIter<App> {
-    let conf = self.config.get();
+  pub fn iter(&self) -> AppLookupIter<AppLaunch> {
+    let conf = self.config.0.get();
     AppLookupIter {
-      config: self.config.clone(),
+      cache: self.cache.clone(),
       extension: conf.app_extension.clone(),
       paths_remaining: conf.app_paths.clone(),
       current: None,
-      maker: Box::new(|p, suffix, cfg| {
-        let icon = cfg.get_app_icon(&p).unwrap_or_default();
-        App::from(p, suffix, icon)
+      maker: Box::new(|p, suffix, cache| {
+        let icon = cache.get_app_icon(&p).unwrap_or_default();
+        AppLaunch::from(p, suffix, icon)
       }),
     }
   }
 
   pub fn init(&self) -> Result<(), anyhow::Error> {
     let items = {
-      let conf = self.config.get();
+      let conf = self.config.0.get();
       let apps = AppLookupIter {
-        config: self.config.clone(),
+        cache: self.cache.clone(),
         extension: conf.app_extension.clone(),
         paths_remaining: conf.app_paths.clone(),
         current: None,
@@ -73,7 +67,7 @@ impl AppLookup {
       };
       apps.collect()
     };
-    self.config.update_app_icons(items)
+    self.cache.update_app_icons(items)
   }
 }
 
@@ -102,7 +96,7 @@ impl<T> Iterator for AppLookupIter<T> {
           match next {
             // Skip path read errors
             Err(_) => self.next(),
-            Ok(item) => Some((self.maker)(item, &self.extension, self.config.clone())),
+            Ok(item) => Some((self.maker)(item, &self.extension, self.cache.clone())),
           }
         } else {
           self.next()

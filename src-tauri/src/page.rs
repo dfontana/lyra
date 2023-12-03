@@ -27,7 +27,6 @@ impl MainData {
 impl MainDataBuilder {
   fn default_calls(&self) -> HashMap<String, String> {
     let mut map: HashMap<String, String> = HashMap::new();
-    map.insert("CALCULATE".into(), "calculate".into());
     map.insert("SEARCH".into(), "search".into());
     map.insert("SUBMIT".into(), "submit".into());
     map.insert("CLOSE".into(), "close".into());
@@ -65,11 +64,12 @@ impl SettingsDataBuilder {
   fn default_calls(&self) -> HashMap<String, String> {
     let mut map: HashMap<String, String> = HashMap::new();
     map.insert("IMAGE_TO_DATA".into(), "image_data_url".into());
-    map.insert("SAVE_BOOKMARKS".into(), "save_bookmarks".into());
-    map.insert("SAVE_SEARCHERS".into(), "save_searchers".into());
-    map.insert("SAVE_ENGINE".into(), "save_engine".into());
     map.insert("GET_CONFIG".into(), "get_config".into());
-    map.insert("VALIDATE_TEMPLATE".into(), "validate_template".into());
+    map.insert("SAVE_PLUGIN_SETTINGS".into(), "save_plugin_settings".into());
+    map.insert(
+      "VALIDATE_PLUGIN_VALUE".into(),
+      "validate_plugin_value".into(),
+    );
     map
   }
 }

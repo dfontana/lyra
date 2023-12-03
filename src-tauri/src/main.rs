@@ -2,20 +2,21 @@
   all(not(debug_assertions), target_os = "windows"),
   windows_subsystem = "windows"
 )]
-mod calc;
 mod closer;
 mod config;
 mod convert;
 mod launcher;
-mod lookup;
+mod logs;
 mod page;
+mod plugin_manager;
 
 use std::{error::Error, io::Read, path::Path, sync::Arc};
 
 use config::{Config, Placement, Styles};
 use launcher::Launcher;
-use lookup::applookup::AppLookup;
 use page::{MainData, Page, SettingsData};
+use plugin_manager::PluginManager;
+use serde_json::json;
 use tauri::{
   http::{Request, Response, ResponseBuilder},
   ActivationPolicy, App, AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, Menu,
@@ -75,7 +76,7 @@ fn open_app(page: Page, app: &App, cfg: Arc<Config>) -> Result<(), anyhow::Error
   let handle = app.handle();
   app
     .global_shortcut_manager()
-    // TODO: move this into the config so folks can customize the trigger
+    // TODO#37 move this into the config so folks can customize the trigger
     .register("CmdOrCtrl+Space", move || {
       let win = handle
         .get_window(page.id())
@@ -87,6 +88,9 @@ fn open_app(page: Page, app: &App, cfg: Arc<Config>) -> Result<(), anyhow::Error
         Ok(false) => {
           if let Err(err) = win.set_focus() {
             info!("Failed to toggle window: {}", err)
+          }
+          if let Err(err) = win.emit("reset-size", json!({})) {
+            info!("Failed to reset state: {}", err);
           }
         }
         Err(err) => {
@@ -131,7 +135,7 @@ fn handle_style(
 }
 
 fn main() {
-  if let Err(err) = config::init_logs() {
+  if let Err(err) = logs::init_logs() {
     error!("Failed to start logger: {}", err);
     return;
   }
@@ -145,11 +149,14 @@ fn main() {
   };
   let global_cfg = config.clone();
   let style_cfg = config.clone();
-  let apps = AppLookup::new(config.clone());
-  if let Err(e) = apps.init() {
-    info!("Failed to initialize app icons: {}", e);
-    return;
-  }
+
+  let plugin_manager = match PluginManager::init(config.clone()) {
+    Ok(pm) => pm,
+    Err(err) => {
+      info!("Failed to initialize plugins: {}", err);
+      return;
+    }
+  };
 
   tauri::Builder::default()
     .system_tray(
@@ -191,16 +198,17 @@ fn main() {
       Ok(())
     })
     .manage(config.clone())
-    .manage(Launcher::new(config, apps))
+    .manage(plugin_manager.clone())
+    .manage(Launcher {
+      config,
+      plugins: plugin_manager,
+    })
     .invoke_handler(tauri::generate_handler![
-      calc::calculate,
       closer::close,
       convert::image_data_url,
       config::get_config,
-      config::save_bookmarks,
-      config::save_engine,
-      config::save_searchers,
-      config::validate_template,
+      config::save_plugin_settings,
+      config::validate_plugin_value,
       launcher::submit,
       launcher::search,
     ])

@@ -41,72 +41,71 @@ impl From<Template> for String {
   }
 }
 
+#[derive(PartialEq)]
+enum State {
+  Opened,
+  Digit,
+  Closed,
+}
+
 impl FromStr for Template {
   type Err = TemplateError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    let mut seen = 0x1FF;
+    let mut seen = 0x1FF; // Tracking 0-9 as bit vec
     let mut markers = 0;
-    let mut is_next = false;
-    let mut has_open = false;
+    let mut state = State::Closed;
+
     for c in s.chars() {
       match c {
         '{' => {
-          if has_open || is_next {
+          if state != State::Closed {
             return Err(TemplateError::InvalidFormat(
               "Missing closing marker: }".into(),
             ));
-          } else {
-            has_open = true;
-            is_next = true;
           }
+          state = State::Opened;
         }
         '}' => {
-          if !has_open {
-            return Err(TemplateError::InvalidFormat(
-              "Missing opening marker: {".into(),
-            ));
-          } else if is_next {
+          if state != State::Digit {
             return Err(TemplateError::InvalidFormat(
               "Did not contain number between markers".into(),
             ));
-          } else {
-            has_open = false;
           }
+          state = State::Closed;
         }
         k => {
-          if !is_next {
+          if state != State::Opened {
             continue;
           }
-          if let Some(d) = k.to_digit(10) {
-            if seen & 1 << d == 0 {
-              return Err(TemplateError::InvalidFormat(format!(
-                "Marker repeated digit: {}",
-                d
-              )));
-            } else {
-              seen ^= 1 << d;
-              markers += 1;
-            }
-            is_next = false;
-          } else {
+          let Some(d) = k.to_digit(10) else {
             return Err(TemplateError::InvalidFormat(format!(
               "Marker contains not a digit: {}",
               k
             )));
+          };
+          if seen & 1 << d == 0 {
+            return Err(TemplateError::InvalidFormat(format!(
+              "Marker repeated digit: {}",
+              d
+            )));
           }
+          seen ^= 1 << d;
+          markers += 1;
+          state = State::Digit;
         }
       }
     }
 
-    if seen == 0x1FF {
-      return Err(TemplateError::InvalidFormat(
-        "Must contain at least one marker in template".into(),
-      ));
-    }
     if 0x1FF != seen + (0..markers).fold(0, |acc, x| acc | 1 << x) {
       return Err(TemplateError::InvalidFormat(
         "Markers are not sequential from 0".into(),
+      ));
+    }
+
+    if state != State::Closed {
+      return Err(TemplateError::InvalidFormat(
+        "Missing closing marker: }".into(),
       ));
     }
 
@@ -149,9 +148,10 @@ mod tests {
     let inp = "https://www.google.com";
     assert_eq!(
       Template::from_str(inp),
-      Err(TemplateError::InvalidFormat(
-        "Must contain at least one marker in template".into()
-      ))
+      Ok(Template {
+        val: inp.to_owned(),
+        markers: 0
+      })
     );
   }
 
@@ -196,7 +196,29 @@ mod tests {
     assert_eq!(
       Template::from_str(inp),
       Err(TemplateError::InvalidFormat(
-        "Missing opening marker: {".into()
+        "Did not contain number between markers".into()
+      ))
+    );
+  }
+
+  #[test]
+  fn missing_closing_brace_end() {
+    let inp = "https://www.google.com?q={0";
+    assert_eq!(
+      Template::from_str(inp),
+      Err(TemplateError::InvalidFormat(
+        "Missing closing marker: }".into()
+      ))
+    );
+  }
+
+  #[test]
+  fn partial_trailing_marker() {
+    let inp = "https://www.google.com?q={";
+    assert_eq!(
+      Template::from_str(inp),
+      Err(TemplateError::InvalidFormat(
+        "Missing closing marker: }".into()
       ))
     );
   }

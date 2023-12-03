@@ -1,10 +1,19 @@
 import React, { useState, useCallback } from 'react';
-import { Button, Table, Tooltip, Avatar, Input, useToasts, Fieldset } from '@geist-ui/core';
+import {
+  Button,
+  Table,
+  Tooltip,
+  Avatar,
+  Input,
+  Divider,
+  useToasts,
+  Fieldset,
+} from '@geist-ui/core';
 import { X } from '@geist-ui/icons';
 import { invoke } from '@tauri-apps/api/tauri';
 import TemplateInput from './templateinput';
-import './bookmarklets.css';
-const { IMAGE_TO_DATA, SAVE_SEARCHERS } = window.__LYRA__.calls;
+import './icons.css';
+const { IMAGE_TO_DATA, SAVE_PLUGIN_SETTINGS } = window.__LYRA__.calls;
 
 function newRow() {
   return {
@@ -15,7 +24,7 @@ function newRow() {
   };
 }
 
-function RenderIconBox(setData, rowData, rowIndex) {
+function RenderIconBox({ setIcon, icon }) {
   const { setToast } = useToasts();
 
   const onPaste = useCallback(
@@ -23,29 +32,23 @@ function RenderIconBox(setData, rowData, rowIndex) {
       event.preventDefault();
       const url = (event.clipboardData || window.clipboardData).getData('text');
       invoke(IMAGE_TO_DATA, { url })
-        .then((icon) => {
-          setData((prev) =>
-            prev.map((item, dataIndex) => (dataIndex !== rowIndex ? item : { ...item, icon }))
-          );
-        })
+        .then(setIcon)
         .catch((err) => setToast({ text: err, type: 'error' }));
     },
-    [setData, setToast, rowIndex]
+    [setIcon, setToast]
   );
 
   const onKeyUp = useCallback(
     (e) => {
       if (e.key === 'Backspace') {
-        setData((prev) =>
-          prev.map((item, dataIndex) => (dataIndex !== rowIndex ? item : { ...item, icon: '' }))
-        );
+        setIcon('');
       }
     },
-    [setData, rowIndex]
+    [setIcon]
   );
   return (
     <div onPaste={onPaste} onKeyUp={onKeyUp} tabIndex="0" className="iconBox">
-      <Avatar src={rowData.icon} style={{ background: 'black' }} />
+      <Avatar src={icon} style={{ background: 'black' }} />
     </div>
   );
 }
@@ -70,11 +73,19 @@ function RenderRemoveButton(setData, rowIndex) {
 export default function SearcherManager({ initialConfig }) {
   const { setToast } = useToasts();
   const [data, setData] = useState(Object.values(initialConfig.searchers));
+  const [defsearch, setDefSearch] = useState(initialConfig.default_searcher || newRow());
   const [lock, setLock] = useState(false);
 
-  const renderIconBox = (_, row, idx) => RenderIconBox(setData, row, idx);
+  const renderIconBox = (_, row, idx) =>
+    RenderIconBox({
+      setIcon: (icon) =>
+        setData((prev) =>
+          prev.map((item, dataIndex) => (dataIndex !== idx ? item : { ...item, icon }))
+        ),
+      icon: row.icon,
+    });
   const renderDelete = (__, _, idx) => RenderRemoveButton(setData, idx);
-  const renderInput = (field) => (value, _, rowIndex) => {
+  const renderTableInput = (field) => (value, _, rowIndex) => {
     const onChange = (event) => {
       setData((last) => {
         return last.map((item, dataIndex) => {
@@ -88,41 +99,89 @@ export default function SearcherManager({ initialConfig }) {
     };
     return <Input scale={0.5} width="100%" value={value} onChange={onChange} />;
   };
+
   const renderTemplateInput = (_, row, idx) =>
     TemplateInput({
       setLock,
-      setValue: (value) =>
+      setValue: (template) =>
         setData((last) => {
           return last.map((item, dataIndex) => {
             if (dataIndex !== idx) return item;
             return {
               ...item,
-              template: value,
+              template,
             };
           });
         }),
       initialValue: row.template,
     });
-  const addRow = useCallback(() => {
-    setData((prev) => [...prev, newRow()]);
-  }, [setData]);
+
+  const addRow = useCallback(
+    (event) => {
+      setData((prev) => [...prev, newRow()]);
+    },
+    [setData]
+  );
+
+  const onLabelChange = useCallback(
+    (event) => {
+      setDefSearch((prev) => ({
+        ...prev,
+        label: event.target.value,
+      }));
+    },
+    [setDefSearch]
+  );
+
+  const onTemplateChange = useCallback(
+    (template) => {
+      setDefSearch((prev) => ({
+        ...prev,
+        template,
+      }));
+    },
+    [setDefSearch]
+  );
+
+  const onIconChange = useCallback(
+    (icon) => {
+      setDefSearch((prev) => ({
+        ...prev,
+        icon,
+      }));
+    },
+    [setDefSearch]
+  );
 
   const saveForm = useCallback(() => {
-    invoke(SAVE_SEARCHERS, { updates: data })
+    invoke(SAVE_PLUGIN_SETTINGS, {
+      forPlugin: 'webq',
+      updates: { searchers: data, default_searcher: defsearch },
+    })
       .then(() => setToast({ text: 'Saved!', type: 'success' }))
       .catch((err) => setToast({ text: `Error: ${err}`, type: 'error', delay: 10000 }));
-  }, [data, setToast]);
+  }, [data, defsearch, setToast]);
 
   return (
     <Fieldset>
       <Fieldset.Content>
+        <Input scale={0.5} width="100%" value={defsearch.label} onChange={onLabelChange} />
+        <TemplateInput
+          setLock={setLock}
+          setValue={onTemplateChange}
+          initialValue={defsearch.template}
+          label="Default Web Query Template"
+          placeholder="https://www.google.com/search?q={0}"
+        />
+        <RenderIconBox icon={defsearch.icon} setIcon={onIconChange} />
+        <Divider />
         <Table data={data}>
-          <Table.Column prop="label" width={175} render={renderInput('label')}>
+          <Table.Column prop="label" width={175} render={renderTableInput('label')}>
             <Tooltip text="The label for this item in result list" placement="bottom">
               Label
             </Tooltip>
           </Table.Column>
-          <Table.Column prop="shortname" width={75} render={renderInput('shortname')}>
+          <Table.Column prop="shortname" width={75} render={renderTableInput('shortname')}>
             <Tooltip text="When searched will return this result" placement="bottom">
               Shortname
             </Tooltip>

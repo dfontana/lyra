@@ -1,0 +1,15 @@
+[package]
+name = "lyra-plugin"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = {workspace = true}
+parking_lot = {workspace = true}
+serde_json = {workspace = true}
+serde = {workspace = true}
+skim = {workspace = true}
+toml = {workspace = true}
+tracing = {workspace = true}

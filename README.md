@@ -22,6 +22,10 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 
 #### MVP 1: Calc, Bookmarks, Templatables, App Launcher (MacOS only)
 
+- Plugin Refactor:
+  - Finish implementing PluginManager
+  - Then implement Plugins
+  - Then need to refactor the UI to handle the new API
 - [ ] Setting input for remainder of config items
 - [ ] Lingering TODOs
 - [ ] App styling finalizations (Notably some blue background peeking through the input)
