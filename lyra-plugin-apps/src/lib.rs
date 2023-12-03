@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use anyhow::Context;
 use applookup::AppLookup;
 use config::{AppCache, AppConf};
-use lyra_plugin::{Config, OkAction, Plugin, SkimmableOption};
+use lyra_plugin::{Config, FuzzyMatchItem, OkAction, Plugin};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::error;
@@ -71,16 +71,16 @@ impl Plugin for AppsPlugin {
       })
   }
 
-  fn skim(&self, _: &str) -> Vec<SkimmableOption> {
+  fn options(&self, _: &str) -> Vec<FuzzyMatchItem> {
     self.apps.iter().map(AppLaunch::into).collect()
   }
 }
 
-impl From<AppLaunch> for SkimmableOption {
-  fn from(app: AppLaunch) -> SkimmableOption {
-    SkimmableOption {
+impl From<AppLaunch> for FuzzyMatchItem {
+  fn from(app: AppLaunch) -> FuzzyMatchItem {
+    FuzzyMatchItem {
       value: serde_json::to_value(&app).unwrap(),
-      skim: Arc::new(app.label.clone()),
+      against: Arc::new(app.label.clone()),
       source: PLUGIN_NAME.to_string(),
     }
   }

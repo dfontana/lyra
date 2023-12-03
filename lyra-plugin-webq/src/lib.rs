@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::anyhow;
 use config::{SearchConfig, WebqConf};
-use lyra_plugin::{Config, OkAction, Plugin, SkimmableOption};
+use lyra_plugin::{Config, FuzzyMatchItem, OkAction, Plugin};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use template::Template;
@@ -91,7 +91,7 @@ impl Plugin for WebqPlugin {
       })
   }
 
-  fn skim(&self, _: &str) -> Vec<lyra_plugin::SkimmableOption> {
+  fn options(&self, _: &str) -> Vec<lyra_plugin::FuzzyMatchItem> {
     self
       .cfg
       .0
@@ -106,7 +106,7 @@ impl Plugin for WebqPlugin {
     true
   }
 
-  fn static_items(&self) -> Vec<lyra_plugin::SkimmableOption> {
+  fn static_items(&self) -> Vec<lyra_plugin::FuzzyMatchItem> {
     match &self.cfg.0.get().default_searcher {
       Some(sh) => vec![sh.into()],
       None => vec![],
@@ -126,12 +126,12 @@ impl From<&SearchConfig> for Searcher {
   }
 }
 
-impl From<&SearchConfig> for SkimmableOption {
+impl From<&SearchConfig> for FuzzyMatchItem {
   fn from(sh: &SearchConfig) -> Self {
     let searcher = Into::<Searcher>::into(sh);
-    SkimmableOption {
+    FuzzyMatchItem {
       value: serde_json::to_value(&searcher).unwrap(),
-      skim: Arc::new(searcher.shortname.clone()),
+      against: Arc::new(searcher.shortname.clone()),
       source: PLUGIN_NAME.to_string(),
     }
   }
