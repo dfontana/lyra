@@ -11,12 +11,17 @@ const TEMPLATE_STARTED = 'start';
 const TEMPLATE_COMPLETED = 'done';
 
 const isDefaultSearch = (pluginValue) => pluginValue.shortname === '';
+const isBookmark = (pluginValue) => pluginValue?.required_args === 0;
 const isTemplatingStarted = (maybePair, search) => {
   if (!maybePair) {
     // Can't be templating nothing
     return false;
   }
   let [_, pluginValue] = maybePair;
+  if (isBookmark(pluginValue) {
+    // Bookmarks shouldn't enter templating mode
+    return false;
+  }
   return (
     !isDefaultSearch(pluginValue) &&
     search.startsWith(pluginValue.shortname) &&
@@ -29,6 +34,10 @@ const isTemplatingComplete = (maybePair, search) => {
     return false;
   }
   let [_, pluginValue] = maybePair;
+  if (isBookmark(pluginValue) {
+    // Bookmarks shouldn't enter templating mode
+    return false;
+  }
   const args = extractArgs(pluginValue, search);
   return args.length === pluginValue.required_args;
 };
@@ -67,7 +76,7 @@ function Search({ inputRef, resetRef, search }) {
         selected = pair[1].Ok;
       } else if (pluginName === 'apps') {
         selected = pair[1];
-      } else if (templateState === TEMPLATE_COMPLETED) {
+      } else if (pluginName === 'webq' && (templateState === TEMPLATE_COMPLETED || isBookmark(pluginValue))) {
         let args = extractArgs(pluginValue, search);
         selected = { ...pluginValue, args };
       } else {
@@ -103,10 +112,6 @@ function Search({ inputRef, resetRef, search }) {
         }
         break;
       case TEMPLATE_COMPLETED:
-        // TODO#38 Bookmarks (eg templates with no args) prevent searches since it sets
-        //       state to template completed. We don't want to allow searching during this
-        //       phase still, as that can cause movement for actual templates.
-        //       Perhaps an empty completed vs non-empty completed will let us change behaviors?
         if (!isTemplatingComplete(results?.[selection], search)) {
           setTemplateState(TEMPLATE_STARTED);
         }
