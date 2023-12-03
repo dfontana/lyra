@@ -6,10 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.57"
-parking_lot = "0.12.0"
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-skim = "0.10.2"
-toml = "0.5.9"
-tracing = "0.1.34"
+anyhow = {workspace = true}
+parking_lot = {workspace = true}
+serde_json = {workspace = true}
+serde = {workspace = true}
+skim = {workspace = true}
+toml = {workspace = true}
+tracing = {workspace = true}

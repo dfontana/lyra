@@ -71,7 +71,7 @@ function Search({ inputRef, resetRef, search }) {
         let args = extractArgs(pluginValue, search);
         selected = { ...pluginValue, args };
       } else {
-        // TODO: UI - We don't have access to setSearch so I can't force a space
+        // TODO#33 - We don't have access to setSearch so I can't force a space
         //       if there isn't one yet. Ideally we can do this or just better model
         //       how this renders in the UI (eg on enter we get prompted or something)
         return;
@@ -103,7 +103,7 @@ function Search({ inputRef, resetRef, search }) {
         }
         break;
       case TEMPLATE_COMPLETED:
-        // TODO: Bookmarks (eg templates with no args) prevent searches since it sets
+        // TODO#38 Bookmarks (eg templates with no args) prevent searches since it sets
         //       state to template completed. We don't want to allow searching during this
         //       phase still, as that can cause movement for actual templates.
         //       Perhaps an empty completed vs non-empty completed will let us change behaviors?

@@ -7,14 +7,14 @@ edition = "2021"
 
 [dependencies]
 lyra-plugin = { path = "../lyra-plugin" }
-anyhow = "1.0.57"
-base64 = "0.21.0"
-glob = "0.3.0"
+anyhow = {workspace=true}
+base64 = {workspace = true}
+glob = "0.3.1"
 icns = "0.3.1"
-open = "3.2.0"
-parking_lot = "0.12.0"
-plist = "1.3.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-toml = "0.7.1"
-tracing = "0.1.34"
+open = {workspace=true}
+parking_lot = {workspace=true}
+plist = "1.6.0"
+serde = {workspace=true}
+serde_json = {workspace=true}
+toml = {workspace=true}
+tracing = {workspace=true}

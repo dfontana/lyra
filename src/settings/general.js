@@ -8,7 +8,7 @@ const PLACEMENT_XY = 'XY';
 export default function General({ initialConfig }) {
   const { setToast } = useToasts();
 
-  // TODO: UI - actually wire this into the initial config & write out, data needs reshaping
+  // TODO#37 UI - actually wire this into the initial config & write out, data needs reshaping
   //      (initialConfig is not flowing correctly here, we need to get it reshaped to do so)
   //      (eg this is always defaulting)
 
@@ -19,10 +19,11 @@ export default function General({ initialConfig }) {
     //   .catch((err) => setToast({ text: `Error: ${err}`, type: 'error', delay: 10000 }));
   }, [setToast]);
 
-  // TODO: UI - implement form entries for the following
-
+  // TODO#35 UI - implement form entries for the following
   // pub app_paths: Vec<PathBuf>,
   // pub app_extension: String,
+
+  // TODO#37
   // pub result_count: usize
 
   const [placement, setPlacement] = useState(initialConfig.placement || PLACEMENT_XY);

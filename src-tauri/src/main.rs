@@ -76,7 +76,7 @@ fn open_app(page: Page, app: &App, cfg: Arc<Config>) -> Result<(), anyhow::Error
   let handle = app.handle();
   app
     .global_shortcut_manager()
-    // TODO: move this into the config so folks can customize the trigger
+    // TODO#37 move this into the config so folks can customize the trigger
     .register("CmdOrCtrl+Space", move || {
       let win = handle
         .get_window(page.id())
