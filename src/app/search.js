@@ -10,37 +10,65 @@ const TEMPLATE_NOT_STARTED = 'not_start';
 const TEMPLATE_STARTED = 'start';
 const TEMPLATE_COMPLETED = 'done';
 
-const isDefaultSearch = (pluginValue) => pluginValue.shortname === '';
-const isBookmark = (pluginValue) => pluginValue?.required_args === 0;
-const isTemplatingStarted = (maybePair, search) => {
-  if (!maybePair) {
-    // Can't be templating nothing
-    return false;
+const Option = (v, p) => ({
+  value: v,
+  present: p,
+  bind(f){
+    // f must have type: v -> Monad<k> --- aka "flatMap"
+    if (this.present) {
+      return f(this.value)
+    }
+    return Option.None()
+  },
+  map(f) {
+    // f must have type: v -> k
+    if (this.present) {
+      return Option.Some(f(this.value))
+    }
+    return Option.None()
+  },
+  apply(f){
+    // f must have type: Monad(v -> k)
+    if (this.present && f.present) {
+      return Option.Some(f.value(this.value))
+    }
+    return Option.None()
+  },
+  fold(f) {
+    // f must have type: Monad(v) -> k
+    return f(this)
+  },
+  peek() {
+    console.log(this.value, this.present)
+    return this;
   }
-  let [_, pluginValue] = maybePair;
-  if (isBookmark(pluginValue)) {
-    // Bookmarks shouldn't enter templating mode
-    return false;
-  }
-  return (
-    !isDefaultSearch(pluginValue) &&
-    search.startsWith(pluginValue.shortname) &&
-    search.includes(' ')
-  );
-};
-const isTemplatingComplete = (maybePair, search) => {
-  if (!maybePair) {
-    // Can't be templating nothing
-    return false;
-  }
-  let [_, pluginValue] = maybePair;
-  if (isBookmark(pluginValue)) {
-    // Bookmarks shouldn't enter templating mode
-    return false;
-  }
-  const args = extractArgs(pluginValue, search);
-  return args.length === pluginValue.required_args;
-};
+})
+Option.None = () => Option(null, false)
+Option.of = v => v ? Option(v, true) : Option.None()
+
+const isDefaultSearch = ([_, pluginValue]) => pluginValue.shortname === ''
+const isBookmark = ([_, pluginValue]) => pluginValue?.required_args === 0
+const startsWith = (prefix) => (string) => string.startsWith(prefix)
+const contains = (substring) => (string) => string.includes(substring)
+const not = f => (...args) => !f(...args)
+
+const unit = f => (...args) => f(...args) ? Option.Some(...args) : Option.None()
+
+const isTemplatingStarted = (maybePair, search) =>
+  Option.of(search)
+    .bind(unit(contains(' ')))
+    .apply(
+      Option.of(maybePair)
+        .bind(unit(not(isBookmark)))
+        .bind(unit(not(isDefaultSearch)))
+        .map(([_, pv]) => startsWith(pv.shortname)))
+    .fold(opt => opt.present && opt.value)
+
+const isTemplatingComplete = (maybePair, search) =>
+  Option.of(maybePair)
+    .bind(unit(not(isBookmark)))
+    .map([_, pv] => extractArgs(pv, search).length === pv.required_args)
+    .fold(opt => opt.present && opt.value)
 
 const extractArgs = (pluginValue, search) => {
   const expectArgs = pluginValue.required_args;
@@ -76,7 +104,7 @@ function Search({ inputRef, resetRef, search }) {
         selected = pair[1].Ok;
       } else if (pluginName === 'apps') {
         selected = pair[1];
-      } else if (pluginName === 'webq' && (templateState === TEMPLATE_COMPLETED || isBookmark(pluginValue))) {
+      } else if (pluginName === 'webq' && (templateState === TEMPLATE_COMPLETED || isBookmark(pair))) {
         let args = extractArgs(pluginValue, search);
         selected = { ...pluginValue, args };
       } else {
