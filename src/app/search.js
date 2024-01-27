@@ -18,7 +18,7 @@ const isTemplatingStarted = (maybePair, search) => {
     return false;
   }
   let [_, pluginValue] = maybePair;
-  if (isBookmark(pluginValue) {
+  if (isBookmark(pluginValue)) {
     // Bookmarks shouldn't enter templating mode
     return false;
   }
@@ -34,7 +34,7 @@ const isTemplatingComplete = (maybePair, search) => {
     return false;
   }
   let [_, pluginValue] = maybePair;
-  if (isBookmark(pluginValue) {
+  if (isBookmark(pluginValue)) {
     // Bookmarks shouldn't enter templating mode
     return false;
   }
