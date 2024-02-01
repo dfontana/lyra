@@ -208,10 +208,17 @@ fn main() {
       config::validate_plugin_value,
       launcher::submit,
       launcher::search,
+      // TODO: Temporary while learning bindgen
+      greet,
     ])
     .register_uri_scheme_protocol("styles", move |app, request| {
       handle_style(&style_cfg, app, request)
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn greet(name: &str) -> String {
+  format!("Hello, {}! You've been greeted from Rust!", name)
 }

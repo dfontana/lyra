@@ -1,0 +1,18 @@
+[build]
+target = "./lyra-ui/index.html"
+
+[watch]
+ignore = [
+  "./lyra-plugin",
+  "./lyra-plugin-apps",
+  "./lyra-plugin-calc",
+  "./lyra-plugin-webq",
+  "./src-icons",
+  "./src-tauri",
+  "./target",
+]
+
+[serve]
+address = "127.0.0.1"
+port = 1420
+open = false
