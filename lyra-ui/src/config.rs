@@ -38,7 +38,7 @@ pub struct Styles {
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum Placement {
-  XY(f64, f64),
+  XY(f32, f32),
 }
 
 impl Default for Styles {
@@ -160,49 +160,49 @@ impl Config {
   }
 }
 
-#[tauri::command]
-pub fn get_config(
-  plugin_manager: tauri::State<'_, PluginManager>,
-  config: tauri::State<Arc<Config>>,
-) -> HashMap<String, Value> {
-  let mut configs = plugin_manager.get_configs().clone();
-  configs.insert(
-    "general".to_string(),
-    serde_json::to_value(config.get().clone()).unwrap(),
-  );
-  configs
-}
+// #[tauri::command]
+// pub fn get_config(
+//   plugin_manager: tauri::State<'_, PluginManager>,
+//   config: tauri::State<Arc<Config>>,
+// ) -> HashMap<String, Value> {
+//   let mut configs = plugin_manager.get_configs().clone();
+//   configs.insert(
+//     "general".to_string(),
+//     serde_json::to_value(config.get().clone()).unwrap(),
+//   );
+//   configs
+// }
 
-#[tauri::command]
-pub fn save_plugin_settings(
-  plugin_manager: tauri::State<'_, PluginManager>,
-  for_plugin: PluginName,
-  updates: HashMap<String, Value>,
-) -> Result<(), String> {
-  plugin_manager
-    .get(&for_plugin) // Result<Plugin, Error>; eg failure to find plugin
-    .and_then(|pl| pl.update_config(updates))
-    .map_err(|err| {
-      error!("Failed to update plugin {}'s config: {}", for_plugin, err);
-      "Failed to save changes".into()
-    })
-}
+// #[tauri::command]
+// pub fn save_plugin_settings(
+//   plugin_manager: tauri::State<'_, PluginManager>,
+//   for_plugin: PluginName,
+//   updates: HashMap<String, Value>,
+// ) -> Result<(), String> {
+//   plugin_manager
+//     .get(&for_plugin) // Result<Plugin, Error>; eg failure to find plugin
+//     .and_then(|pl| pl.update_config(updates))
+//     .map_err(|err| {
+//       error!("Failed to update plugin {}'s config: {}", for_plugin, err);
+//       "Failed to save changes".into()
+//     })
+// }
 
-#[tauri::command]
-pub fn validate_plugin_value(
-  plugin_manager: tauri::State<PluginManager>,
-  for_plugin: PluginName,
-  input_type: String,
-  input_value: String,
-) -> Result<(), String> {
-  plugin_manager
-    .get(&for_plugin)
-    .map_err(|err| {
-      error!("Failed to verify plugin {} input: {}", for_plugin, err);
-      "Error locating plugin to validate with".to_string()
-    })
-    .and_then(|pl| {
-      pl.validate_value(&input_type, &input_value)
-        .map_err(|e| format!("{}", e))
-    })
-}
+// #[tauri::command]
+// pub fn validate_plugin_value(
+//   plugin_manager: tauri::State<PluginManager>,
+//   for_plugin: PluginName,
+//   input_type: String,
+//   input_value: String,
+// ) -> Result<(), String> {
+//   plugin_manager
+//     .get(&for_plugin)
+//     .map_err(|err| {
+//       error!("Failed to verify plugin {} input: {}", for_plugin, err);
+//       "Error locating plugin to validate with".to_string()
+//     })
+//     .and_then(|pl| {
+//       pl.validate_value(&input_type, &input_value)
+//         .map_err(|e| format!("{}", e))
+//     })
+// }

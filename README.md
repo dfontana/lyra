@@ -1,11 +1,11 @@
 <h1 align="center">
   <br>
   Lyra
-  <img src="https://raw.githubusercontent.com/dfontana/lyra/master/src-icons/app-icon-alt.png" alt="Lyra" width="25">
+  <img src="https://raw.githubusercontent.com/dfontana/lyra/master/lyra-ui/icons/app-icon-alt.png" alt="Lyra" width="25">
   <br>
 </h1>
 
-<h4 align="center">A cross-platform launcher built with <a href="https://tauri.app/" target="_blank">Tauri</a>.</h4>
+<h4 align="center">A cross-platform launcher built with <a href="https://github.com/emilk/egui/" target="_blank">egui</a>.</h4>
 
 <p align="center">
   <a href="#status">Status</a> •

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{closer, config::Config, plugin_manager::PluginManager};
+use crate::{config::Config, plugin_manager::PluginManager};
 use lyra_plugin::{FuzzyMatchItem, OkAction, PluginName};
 use nucleo_matcher::{
   pattern::{CaseMatching, Pattern},
@@ -8,7 +8,6 @@ use nucleo_matcher::{
 };
 use parking_lot::RwLock;
 use serde_json::Value;
-use tauri::ClipboardManager;
 use tracing::error;
 
 pub struct Launcher {
@@ -68,50 +67,52 @@ impl Launcher {
   }
 }
 
-#[tauri::command]
-pub async fn search(
-  launcher: tauri::State<'_, Launcher>,
-  search: String,
-) -> Result<Vec<(PluginName, Value)>, String> {
-  let options = launcher.get_options(&search).await;
-  Ok(
-    options
-      .iter()
-      .map(|sk| (sk.source.clone(), sk.value.clone()))
-      .collect(),
-  )
-}
+// #[tauri::command]
+// pub async fn search(
+//   launcher: tauri::State<'_, Launcher>,
+//   search: String,
+// ) -> Result<Vec<(PluginName, Value)>, String> {
+//   let options = launcher.get_options(&search).await;
+//   Ok(
+//     options
+//       .iter()
+//       .map(|sk| (sk.source.clone(), sk.value.clone()))
+//       .collect(),
+//   )
+// }
 
-#[tauri::command]
-pub fn submit(
-  launcher: tauri::State<'_, Launcher>,
-  app_handle: tauri::AppHandle,
-  for_plugin: PluginName,
-  selected: Value,
-  window: tauri::Window,
-) -> Result<Value, Value> {
-  match launcher.launch(for_plugin, selected) {
-    Ok(OkAction {
-      value,
-      close_win: true,
-      copy: true,
-    }) => {
-      app_handle
-        .clipboard_manager()
-        .write_text(value.to_string().trim_matches('"'))
-        .unwrap();
-      closer::close_win(&window);
-      Ok(value)
-    }
-    Ok(OkAction {
-      value,
-      close_win: true,
-      ..
-    }) => {
-      closer::close_win(&window);
-      Ok(value)
-    }
-    Ok(OkAction { value, .. }) => Ok(value),
-    Err(err) => Err(err),
-  }
-}
+// TODO: Use the arboard creat for clipboard access now
+// https://crates.io/crates/arboard
+// #[tauri::command]
+// pub fn submit(
+//   launcher: tauri::State<'_, Launcher>,
+//   app_handle: tauri::AppHandle,
+//   for_plugin: PluginName,
+//   selected: Value,
+//   window: tauri::Window,
+// ) -> Result<Value, Value> {
+//   match launcher.launch(for_plugin, selected) {
+//     Ok(OkAction {
+//       value,
+//       close_win: true,
+//       copy: true,
+//     }) => {
+//       app_handle
+//         .clipboard_manager()
+//         .write_text(value.to_string().trim_matches('"'))
+//         .unwrap();
+//       closer::close_win(&window);
+//       Ok(value)
+//     }
+//     Ok(OkAction {
+//       value,
+//       close_win: true,
+//       ..
+//     }) => {
+//       closer::close_win(&window);
+//       Ok(value)
+//     }
+//     Ok(OkAction { value, .. }) => Ok(value),
+//     Err(err) => Err(err),
+//   }
+// }
