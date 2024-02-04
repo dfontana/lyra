@@ -30,7 +30,7 @@ impl AppsPlugin {
     let cfg = Arc::new(AppConf(Config::load(
       conf_dir.join(format!("{}.toml", PLUGIN_NAME)),
     )?));
-    let cache = AppCache::load(cache_dir.join(format!("app_icons.tml")))?;
+    let cache = AppCache::load(cache_dir.join(format!("app_icons.toml")))?;
     let apps = AppLookup {
       config: cfg.clone(),
       cache: Arc::new(cache),

@@ -7,8 +7,8 @@ mod plugin_manager;
 use anyhow::anyhow;
 use eframe::egui;
 use egui::{
-  Align, Color32, Event, EventFilter, FontId, IconData, Key, Modifiers, TextBuffer, TextEdit,
-  ViewportBuilder,
+  Align, Color32, Event, EventFilter, FontId, IconData, Image, Key, Modifiers, TextBuffer,
+  TextEdit, ViewportBuilder,
 };
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 use serde_json::Value;
@@ -46,6 +46,7 @@ fn main() -> anyhow::Result<()> {
     },
     Box::new(move |cc| {
       init_event_listeners(cc.egui_ctx.clone(), toggle_hk_id);
+      egui_extras::install_image_loaders(&cc.egui_ctx);
       // Note the tray must be built in this thread or it doesn't work
       Box::new(bld.build(mk_system_tray().build().unwrap()))
     }),
@@ -129,7 +130,7 @@ impl eframe::App for LyraUi {
         ui.vertical_centered(|ui| {
           // TODO: Only render frame on the selected option and invert the colors. Distinguish this one
           //       differently
-          let res = mk_text_row(&mut self.input, false, true).show(ui).response;
+          let res = mk_text_edit(&mut self.input, false, true).show(ui).response;
           res.request_focus();
 
           // Navigation (TODO: this needs cleaning up, yuck)
@@ -153,17 +154,45 @@ impl eframe::App for LyraUi {
             self.selected = 0;
           }
 
-          // TODO: Can compute/layout this better by using actual occupied rect
-          //       and having the input row be a parent to these
-          for (idx, (pvn, opt)) in self.options.iter().enumerate() {
-            // TODO: Need to render these options correctly; how to render icons? child_ui that's horizontal/manual layout?
-            // Images look viable as their own widget & just pulling the bytes instead of data uris
-            // https://docs.rs/egui/latest/egui/widgets/struct.Image.html (for now you can just strip the prefixes & remove
-            // base64 encoding? Unless there's a way to still render that)
-            mk_text_row(&mut "a result".to_string(), idx == self.selected, true).show(ui);
+          for (idx, (plugin_name, opt)) in self.options.iter().enumerate() {
+            // TODO: Handle the other AppLaunch/Launcher response shapes. Maybe find a better interface than Value.
+            let obj = opt.as_object();
+
+            let label = obj
+              .filter(|m| m.contains_key("label"))
+              .and_then(|m| m.get("label"))
+              .map(|l| l.to_string())
+              .map(|s| s.trim_matches('"').to_owned())
+              .unwrap_or("Unlabelled Result".into());
+
+            let icon = obj
+              .filter(|m| m.contains_key("icon"))
+              .and_then(|m| m.get("icon"))
+              .and_then(|v| v.as_str())
+              .and_then(|s| {
+                s.strip_prefix("data:image/png;base64,")
+                  .map(|s| s.to_owned())
+              })
+              .ok_or(anyhow!("TODO: Non-PNG support"))
+              .and_then(|s| convert::decode_bytes(&s));
+
+            ui.horizontal(|ui| {
+              // TODO: Can we render the entire row's background instead of just text edit frame?
+              //       Can then just render frame on the input
+              if let Ok(img) = icon {
+                ui.add(
+                  Image::from_bytes(format!("bytes://{}.png", label.to_string()), img)
+                    .maintain_aspect_ratio(true)
+                    .shrink_to_fit(),
+                );
+              }
+              mk_text_edit(&mut label.to_string(), idx == self.selected, true).show(ui);
+            });
           }
 
           if res.changed() {
+            // TODO: Can compute/layout this better by using actual occupied rect
+            //       and having the input row be a parent to these
             let height = ui.min_rect().height() + (padding * 2.0);
             let width = ui.min_rect().width() + (padding * 2.0);
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([width, height].into()));
@@ -173,7 +202,7 @@ impl eframe::App for LyraUi {
   }
 }
 
-fn mk_text_row<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: bool) -> TextEdit {
+fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: bool) -> TextEdit {
   TextEdit::singleline(text)
     .desired_width(f32::INFINITY)
     .margin((0.0, 2.0).into())
