@@ -2689,6 +2689,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "tray-icon",
+ "winit",
 ]
 
 [[package]]

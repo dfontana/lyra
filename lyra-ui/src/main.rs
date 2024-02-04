@@ -5,7 +5,7 @@ mod logs;
 mod plugin_manager;
 
 use anyhow::anyhow;
-use eframe::{egui, Frame};
+use eframe::{egui, EventLoopBuilderHook, Frame};
 use egui::{
   Align, Color32, Event, EventFilter, FontId, IconData, Image, InputState, Key, Modifiers,
   RichText, TextBuffer, TextEdit, Ui, ViewportBuilder,
@@ -21,6 +21,8 @@ use tray_icon::{
   menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
   TrayIconBuilder,
 };
+#[cfg(target_os = "macos")]
+use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
 
 use config::{Config, Placement, Styles};
 use launcher::Launcher;
@@ -43,6 +45,12 @@ fn main() -> anyhow::Result<()> {
     "Lyra",
     eframe::NativeOptions {
       viewport: mk_viewport(bld.config.clone()),
+      event_loop_builder: Some(Box::new(|evlp| {
+        #[cfg(target_os = "macos")]
+        evlp
+          .with_activation_policy(ActivationPolicy::Accessory)
+          .with_activate_ignoring_other_apps(true);
+      })),
       ..Default::default()
     },
     Box::new(move |cc| {
@@ -320,8 +328,12 @@ fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {
 }
 
 fn close_window(ctx: &egui::Context, vis: bool) {
-  // TODO: Ideally this hides the application (meaning invisible AND yields focus)
-  //       Right now it just goes invisible and does not yield focus.
+  // TODO: So both TAO & Winit are issuing an orderOut command on MacOS
+  // (https://developer.apple.com/documentation/appkit/nswindow/1419660-orderout)
+  // but for some reason the previous application does not take focus. Tauri also
+  // suffers from this so it's not a regression with using EGUI but instead
+  // something else entirely that apps like Alfred & Raycast don't experience.
+  // Will need more research.
   ctx.send_viewport_cmd(egui::ViewportCommand::Visible(vis));
   if vis {
     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
