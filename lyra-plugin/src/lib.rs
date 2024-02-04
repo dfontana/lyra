@@ -63,7 +63,7 @@ pub trait Plugin: Send + Sync {
   ///
   /// Plugins can choose to close the window after they are done executing by setting the boolean
   /// in the returned OkAction.
-  fn action(&self, input: Value) -> Result<OkAction, Value>;
+  fn action(&self, input: Value) -> Result<OkAction, anyhow::Error>;
 
   /// This is the options a plugin wants to contribute based on the given search string. Note this won't
   /// have anything like a prefix on the value, so bear that in mind - it's safe to interpret as is.

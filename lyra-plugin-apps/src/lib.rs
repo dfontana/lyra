@@ -1,12 +1,11 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use applookup::AppLookup;
 use config::{AppCache, AppConf};
 use lyra_plugin::{Config, FuzzyMatchItem, OkAction, Plugin};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::error;
 
 mod applookup;
 mod config;
@@ -50,25 +49,15 @@ impl Plugin for AppsPlugin {
     self.cfg.update(updates)
   }
 
-  fn action(&self, input: Value) -> Result<OkAction, Value> {
-    let data: AppLaunch = match serde_json::from_value(input) {
-      Ok(s) => s,
-      Err(err) => {
-        error!("Failed to parse AppLaunch from input: {:?}", err);
-        return Err(Value::Null);
-      }
-    };
-
+  fn action(&self, input: Value) -> Result<OkAction, anyhow::Error> {
+    let data: AppLaunch = serde_json::from_value(input)?;
     open::that(data.path.clone())
       .map(|_| OkAction {
         value: Value::Null,
         close_win: true,
         copy: false,
       })
-      .map_err(|err| {
-        error!("Action failed for {:?}, err: {:?}", data.label, err);
-        Value::Null
-      })
+      .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", data.label, err))
   }
 
   fn options(&self, _: &str) -> Vec<FuzzyMatchItem> {

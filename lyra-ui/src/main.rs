@@ -1,15 +1,12 @@
 mod config;
-// mod convert;
+mod convert;
 mod launcher;
 mod logs;
-// mod page;
 mod plugin_manager;
+
 use anyhow::anyhow;
 use eframe::egui;
-use egui::{
-  Align, Color32, Event, FontDefinitions, FontId, IconData, Key, TextEdit, TextStyle,
-  ViewportBuilder,
-};
+use egui::{Align, Color32, Event, FontId, IconData, Key, TextBuffer, TextEdit, ViewportBuilder};
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,7 +19,6 @@ use tray_icon::{
 
 use config::{Config, Placement, Styles};
 use launcher::Launcher;
-// use page::{MainData, Page, SettingsData};
 use plugin_manager::PluginManager;
 
 // TODO Move these into styles & pass around
@@ -59,6 +55,7 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   let plugins = PluginManager::init(config.clone())?;
   Ok(LyraUiBuilder {
     config: config.clone(),
+    plugins: plugins.clone(),
     launcher: Launcher::new(config, plugins),
   })
 }
@@ -67,12 +64,14 @@ struct LyraUi {
   // Note must hold a Rc<RefCell<>> on for the Tray to stay alive/active
   _system_tray: Rc<RefCell<TrayIcon>>,
   config: Arc<Config>,
+  plugins: PluginManager,
   launcher: Launcher,
   input: String,
 }
 
 struct LyraUiBuilder {
   pub config: Arc<Config>,
+  pub plugins: PluginManager,
   pub launcher: Launcher,
 }
 impl LyraUiBuilder {
@@ -80,6 +79,7 @@ impl LyraUiBuilder {
     LyraUi {
       _system_tray: Rc::new(RefCell::new(system_tray)),
       config: self.config,
+      plugins: self.plugins,
       launcher: self.launcher,
       input: "".into(),
     }
@@ -118,19 +118,8 @@ impl eframe::App for LyraUi {
         let mut ui = ui.child_ui(rect, *ui.layout());
 
         ui.vertical_centered(|ui| {
-          let res = TextEdit::singleline(&mut self.input)
-            .desired_width(f32::INFINITY)
-            .margin((0.0, 2.0).into())
-            // TODO: User entered FontDefinition with fallback
-            .font(FontId::new(16.0, egui::FontFamily::Monospace))
-            .text_color(Color32::WHITE)
-            .clip_text(true)
-            // TODO: Only render frame on the selected option and invert the colors
-            .frame(true)
-            .cursor_at_end(true)
-            .vertical_align(Align::Center)
-            .show(ui)
-            .response;
+          // TODO: Only render frame on the selected option and invert the colors
+          let res = mk_text_row(&mut self.input, true, true).show(ui).response;
 
           res.request_focus();
           if res.changed() {
@@ -140,21 +129,23 @@ impl eframe::App for LyraUi {
             let height = ROW_HEIGHT * 1.0;
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([APP_WIDTH, height].into()));
           }
-
-          // TextEdit::singleline(&mut self.input)
-          //   .desired_width(f32::INFINITY)
-          //   .margin((0.0, 0.0).into())
-          //   .font(FontId::new(16.0, egui::FontFamily::Monospace))
-          //   .text_color(Color32::WHITE)
-          //   .clip_text(true)
-          //   .frame(false)
-          //   .cursor_at_end(true)
-          //   .interactive(false)
-          //   .vertical_align(Align::Center)
-          //   .show(ui);
         });
       });
   }
+}
+
+fn mk_text_row<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: bool) -> TextEdit {
+  TextEdit::singleline(text)
+    .desired_width(f32::INFINITY)
+    .margin((0.0, 2.0).into())
+    // TODO: User entered FontDefinition with fallback
+    .font(FontId::new(16.0, egui::FontFamily::Monospace))
+    .text_color(Color32::WHITE)
+    .clip_text(true)
+    .cursor_at_end(true)
+    .vertical_align(Align::Center)
+    .frame(selected)
+    .interactive(interactive)
 }
 
 fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {

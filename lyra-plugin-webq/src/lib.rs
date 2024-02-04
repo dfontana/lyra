@@ -6,7 +6,6 @@ use lyra_plugin::{Config, FuzzyMatchItem, OkAction, Plugin};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use template::Template;
-use tracing::error;
 
 mod config;
 mod template;
@@ -58,14 +57,8 @@ impl Plugin for WebqPlugin {
     }
   }
 
-  fn action(&self, input: Value) -> Result<lyra_plugin::OkAction, Value> {
-    let data: Searcher = match serde_json::from_value(input) {
-      Ok(s) => s,
-      Err(err) => {
-        error!("Failed to parse searcher from input: {:?}", err);
-        return Err(Value::Null);
-      }
-    };
+  fn action(&self, input: Value) -> Result<lyra_plugin::OkAction, anyhow::Error> {
+    let data: Searcher = serde_json::from_value(input)?;
     let cfg = self.cfg.0.get();
     cfg
       .searchers
@@ -85,10 +78,7 @@ impl Plugin for WebqPlugin {
         close_win: true,
         copy: false,
       })
-      .map_err(|err| {
-        error!("Action failed for {:?}, err: {:?}", data.label, err);
-        Value::Null
-      })
+      .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", data.label, err))
   }
 
   fn options(&self, _: &str) -> Vec<lyra_plugin::FuzzyMatchItem> {

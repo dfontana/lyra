@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::{config::Config, plugin_manager::PluginManager};
+use arboard::Clipboard;
 use lyra_plugin::{FuzzyMatchItem, OkAction, PluginName};
 use nucleo_matcher::{
   pattern::{CaseMatching, Pattern},
@@ -8,7 +9,6 @@ use nucleo_matcher::{
 };
 use parking_lot::RwLock;
 use serde_json::Value;
-use tracing::error;
 
 pub struct Launcher {
   pub config: Arc<Config>,
@@ -55,64 +55,50 @@ impl Launcher {
       .collect()
   }
 
-  pub fn launch(&self, plugin: PluginName, selected: Value) -> Result<OkAction, Value> {
-    self
-      .plugins
-      .get(&plugin)
-      .map_err(|e| {
-        error!("Failed to execute plugin: {}", e);
-        "Failed to launch".into()
-      })
-      .and_then(|pl| pl.action(selected))
+  pub fn launch(&self, plugin: PluginName, selected: Value) -> Result<OkAction, anyhow::Error> {
+    self.plugins.get(&plugin).and_then(|pl| pl.action(selected))
   }
 }
 
-// #[tauri::command]
-// pub async fn search(
-//   launcher: tauri::State<'_, Launcher>,
-//   search: String,
-// ) -> Result<Vec<(PluginName, Value)>, String> {
-//   let options = launcher.get_options(&search).await;
-//   Ok(
-//     options
-//       .iter()
-//       .map(|sk| (sk.source.clone(), sk.value.clone()))
-//       .collect(),
-//   )
-// }
+pub async fn search(
+  launcher: Launcher,
+  search: String,
+) -> Result<Vec<(PluginName, Value)>, String> {
+  let options = launcher.get_options(&search).await;
+  Ok(
+    options
+      .iter()
+      .map(|sk| (sk.source.clone(), sk.value.clone()))
+      .collect(),
+  )
+}
 
-// TODO: Use the arboard creat for clipboard access now
-// https://crates.io/crates/arboard
-// #[tauri::command]
-// pub fn submit(
-//   launcher: tauri::State<'_, Launcher>,
-//   app_handle: tauri::AppHandle,
-//   for_plugin: PluginName,
-//   selected: Value,
-//   window: tauri::Window,
-// ) -> Result<Value, Value> {
-//   match launcher.launch(for_plugin, selected) {
-//     Ok(OkAction {
-//       value,
-//       close_win: true,
-//       copy: true,
-//     }) => {
-//       app_handle
-//         .clipboard_manager()
-//         .write_text(value.to_string().trim_matches('"'))
-//         .unwrap();
-//       closer::close_win(&window);
-//       Ok(value)
-//     }
-//     Ok(OkAction {
-//       value,
-//       close_win: true,
-//       ..
-//     }) => {
-//       closer::close_win(&window);
-//       Ok(value)
-//     }
-//     Ok(OkAction { value, .. }) => Ok(value),
-//     Err(err) => Err(err),
-//   }
-// }
+pub fn submit(
+  clipboard: &mut Clipboard,
+  launcher: Launcher,
+  for_plugin: PluginName,
+  selected: Value,
+  close_app: impl FnOnce(),
+) -> Result<Value, anyhow::Error> {
+  match launcher.launch(for_plugin, selected) {
+    Ok(OkAction {
+      value,
+      close_win: true,
+      copy: true,
+    }) => {
+      clipboard.set_text(value.to_string().trim_matches('"'))?;
+      close_app();
+      Ok(value)
+    }
+    Ok(OkAction {
+      value,
+      close_win: true,
+      ..
+    }) => {
+      close_app();
+      Ok(value)
+    }
+    Ok(OkAction { value, .. }) => Ok(value),
+    Err(err) => Err(err),
+  }
+}

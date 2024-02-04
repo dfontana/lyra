@@ -20,7 +20,6 @@ async fn convert_image(url: String) -> Result<String, anyhow::Error> {
   Ok(str)
 }
 
-#[tauri::command]
 pub async fn image_data_url(url: String) -> Result<String, String> {
   convert_image(url).await.map_err(|err| {
     error!("Failed to parse image to data-url: {}", err);

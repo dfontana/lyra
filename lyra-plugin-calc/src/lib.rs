@@ -89,7 +89,7 @@ impl Plugin for CalcPlugin {
     Some(self.cfg.0.get().prefix.clone())
   }
 
-  fn action(&self, input: Value) -> Result<OkAction, Value> {
+  fn action(&self, input: Value) -> Result<OkAction, anyhow::Error> {
     Ok(OkAction {
       value: input,
       close_win: true,

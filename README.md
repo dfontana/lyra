@@ -73,11 +73,5 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 
 ### Quick Reference
 
-- `yarn install && yarn build` to init the repo
-- `cargo tauri dev` for dev server
-- `cargo tauri icon ../src-icon/app-icon.png` for icons (from the `src-tauri` dir)
-- `cargo tauri build` to package app
-  - Binary built: `src-tauri/target/release/[app name]`
-  - Installers built: `src-tauri/target/release/bundle/`
-- `yarn react-devtools` to debug
+- `cargo tauri icon ../src-icon/app-icon.png` for icons
 
