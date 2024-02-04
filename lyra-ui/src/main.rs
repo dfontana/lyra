@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use eframe::egui;
 use egui::{
   Align, Color32, Event, EventFilter, FontId, IconData, Image, InputState, Key, Modifiers,
-  TextBuffer, TextEdit, ViewportBuilder,
+  RichText, TextBuffer, TextEdit, Ui, ViewportBuilder,
 };
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 use serde_json::Value;
@@ -140,6 +140,7 @@ impl eframe::App for LyraUi {
           if ui.input(is_nav_up) {
             self.selected = self.selected.checked_sub(1).unwrap_or(0);
           }
+          // TODO handle enter action
 
           if res.changed() {
             // TODO: Perform calc if calc'ing
@@ -148,40 +149,16 @@ impl eframe::App for LyraUi {
             self.selected = 0;
           }
 
+          // TODO: Eventually can defer UI behavior to each plugin tbh
           for (idx, (plugin_name, opt)) in self.options.iter().enumerate() {
-            // TODO: Handle the other AppLaunch/Launcher response shapes. Maybe find a better interface than Value.
-            let obj = opt.as_object();
-
-            let label = obj
-              .filter(|m| m.contains_key("label"))
-              .and_then(|m| m.get("label"))
-              .map(|l| l.to_string())
-              .map(|s| s.trim_matches('"').to_owned())
-              .unwrap_or("Unlabelled Result".into());
-
-            let icon = obj
-              .filter(|m| m.contains_key("icon"))
-              .and_then(|m| m.get("icon"))
-              .and_then(|v| v.as_str())
-              .and_then(|s| {
-                s.strip_prefix("data:image/png;base64,")
-                  .map(|s| s.to_owned())
-              })
-              .ok_or(anyhow!("TODO: Non-PNG support"))
-              .and_then(|s| convert::decode_bytes(&s));
-
-            ui.horizontal(|ui| {
-              // TODO: Can we render the entire row's background instead of just text edit frame?
-              //       Can then just render frame on the input
-              if let Ok(img) = icon {
-                ui.add(
-                  Image::from_bytes(format!("bytes://{}.png", label.to_string()), img)
-                    .maintain_aspect_ratio(true)
-                    .shrink_to_fit(),
-                );
-              }
-              mk_text_edit(&mut label.to_string(), idx == self.selected, true).show(ui);
-            });
+            match plugin_name.as_str() {
+              // TODO: Calc should be set as selected so the action can be taken
+              "calc" => mk_calc(ui, opt, &self.input),
+              // TODO: Handle the other AppLaunch/Launcher response shapes. Maybe find a better interface than Value.
+              "apps" | "webq" => mk_apps(idx, self.selected, ui, opt),
+              // TODO: Don't panic here but log+continue
+              _ => panic!("Unknown plugin: {}", plugin_name),
+            }
           }
 
           if res.changed() {
@@ -206,6 +183,86 @@ fn is_nav_up(i: &InputState) -> bool {
     || (i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
 }
 
+fn mk_calc(ui: &mut Ui, opt: &Value, inp: &str) {
+  ui.horizontal(|ui| {
+    let ok_result = opt
+      .as_object()
+      .and_then(|m| m.get("Ok"))
+      .map(|v| v.to_string())
+      .map(|s| s.trim_matches('"').to_owned());
+
+    if let Some(v) = ok_result {
+      ui.label(mk_text(v));
+      return;
+    }
+
+    let err_result = opt
+      .as_object()
+      .and_then(|m| m.get("Err"))
+      .and_then(|m| m.as_object());
+    let err_msg = err_result
+      .and_then(|m| m.get("message"))
+      .map(|v| v.to_string())
+      .map(|s| s.trim_matches('"').to_owned());
+    let err_start = err_result
+      .and_then(|m| m.get("start"))
+      .and_then(|s| s.as_u64())
+      .map(|v| v as usize);
+    let err_end = err_result
+      .and_then(|m| m.get("end"))
+      .and_then(|s| s.as_u64())
+      .map(|v| v as usize);
+
+    match (err_start, err_end, err_msg) {
+      (Some(s), Some(e), _) if s != 0 && e != 0 => {
+        ui.label(mk_text(&inp[1..s]));
+        ui.label(mk_text(&inp[s..e + 1]).color(Color32::RED));
+        ui.label(mk_text(&inp[e + 1..]));
+      }
+      (_, _, Some(msg)) => {
+        ui.label(mk_text(msg));
+      }
+      _ => return,
+    }
+  });
+}
+
+fn mk_apps(idx: usize, selected: usize, ui: &mut Ui, opt: &Value) {
+  let obj = opt.as_object();
+
+  let label = obj
+    .filter(|m| m.contains_key("label"))
+    .and_then(|m| m.get("label"))
+    .map(|l| l.to_string())
+    .map(|s| s.trim_matches('"').to_owned())
+    .unwrap_or("Unlabelled Result".into());
+
+  let icon = obj
+    .filter(|m| m.contains_key("icon"))
+    .and_then(|m| m.get("icon"))
+    .and_then(|v| v.as_str())
+    .and_then(|s| {
+      s.strip_prefix("data:image/png;base64,")
+        .map(|s| s.to_owned())
+    })
+    .ok_or(anyhow!("TODO: Non-PNG support"))
+    .and_then(|s| convert::decode_bytes(&s));
+
+  ui.horizontal(|ui| {
+    // TODO: Can we render the entire row's background instead of just text edit frame?
+    //       Can then just render frame on the input
+    if let Ok(img) = icon {
+      ui.add(
+        Image::from_bytes(format!("bytes://{}.png", label.to_string()), img)
+          .maintain_aspect_ratio(true)
+          .shrink_to_fit(),
+      );
+    }
+    // TODO: Probably a better widget for this than text edit
+    mk_text_edit(&mut label.to_string(), idx == selected, true).show(ui);
+  });
+}
+
 fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: bool) -> TextEdit {
   TextEdit::singleline(text)
     .desired_width(f32::INFINITY)
@@ -224,6 +281,10 @@ fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: b
       vertical_arrows: false,
       ..Default::default()
     })
+}
+
+fn mk_text(text: impl Into<String>) -> RichText {
+  RichText::new(text).font(FontId::new(16.0, egui::FontFamily::Monospace))
 }
 
 fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {
