@@ -8,6 +8,7 @@ use anyhow::anyhow;
 use eframe::egui;
 use egui::{Align, Color32, Event, FontId, IconData, Key, TextBuffer, TextEdit, ViewportBuilder};
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
+use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
@@ -67,6 +68,7 @@ struct LyraUi {
   plugins: PluginManager,
   launcher: Launcher,
   input: String,
+  options: Vec<(String, Value)>,
 }
 
 struct LyraUiBuilder {
@@ -82,6 +84,7 @@ impl LyraUiBuilder {
       plugins: self.plugins,
       launcher: self.launcher,
       input: "".into(),
+      options: Vec::new(),
     }
   }
 }
@@ -114,20 +117,35 @@ impl eframe::App for LyraUi {
     egui::CentralPanel::default()
       .frame(window_decor)
       .show(ctx, |ui| {
-        let rect = ui.max_rect().shrink(4.0);
+        let padding = 4.0;
+        let rect = ui.max_rect().shrink(padding);
         let mut ui = ui.child_ui(rect, *ui.layout());
 
         ui.vertical_centered(|ui| {
           // TODO: Only render frame on the selected option and invert the colors
           let res = mk_text_row(&mut self.input, true, true).show(ui).response;
 
+          // TODO: This will prevent any interactions from changing focus, but that might be fine.
+          // You can also surrender focus as needed.
           res.request_focus();
+
           if res.changed() {
             // TODO: Perform search if searching
             // TODO: Perform calc if calc'ing
             // TODO: Perform templating if templating
-            let height = ROW_HEIGHT * 1.0;
-            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([APP_WIDTH, height].into()));
+            self.options = launcher::search(&self.launcher, &self.input);
+          }
+
+          // TODO: Can compute/layout this better by using actual occupied rect
+          //       and having the input row be a parent to these
+          for (pvn, opt) in self.options.iter() {
+            mk_text_row(&mut "a result".to_string(), true, true).show(ui);
+          }
+
+          if res.changed() {
+            let height = ui.min_rect().height() + (padding * 2.0);
+            let width = ui.min_rect().width() + (padding * 2.0);
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([width, height].into()));
           }
         });
       });

@@ -27,7 +27,7 @@ impl Launcher {
       matcher: RwLock::new(Matcher::new(cfg)),
     }
   }
-  pub async fn get_options(&self, search: &str) -> Vec<FuzzyMatchItem> {
+  pub fn get_options(&self, search: &str) -> Vec<FuzzyMatchItem> {
     if search.is_empty() {
       // Special case, empty string == nothing back instead of everything
       return Vec::new();
@@ -60,17 +60,12 @@ impl Launcher {
   }
 }
 
-pub async fn search(
-  launcher: Launcher,
-  search: String,
-) -> Result<Vec<(PluginName, Value)>, String> {
-  let options = launcher.get_options(&search).await;
-  Ok(
-    options
-      .iter()
-      .map(|sk| (sk.source.clone(), sk.value.clone()))
-      .collect(),
-  )
+pub fn search(launcher: &Launcher, search: &String) -> Vec<(PluginName, Value)> {
+  launcher
+    .get_options(search)
+    .iter()
+    .map(|sk| (sk.source.clone(), sk.value.clone()))
+    .collect()
 }
 
 pub fn submit(
