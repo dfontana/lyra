@@ -7,8 +7,8 @@ mod plugin_manager;
 use anyhow::anyhow;
 use eframe::egui;
 use egui::{
-  Align, Color32, Event, EventFilter, FontId, IconData, Image, Key, Modifiers, TextBuffer,
-  TextEdit, ViewportBuilder,
+  Align, Color32, Event, EventFilter, FontId, IconData, Image, InputState, Key, Modifiers,
+  TextBuffer, TextEdit, ViewportBuilder,
 };
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 use serde_json::Value;
@@ -133,17 +133,11 @@ impl eframe::App for LyraUi {
           let res = mk_text_edit(&mut self.input, false, true).show(ui).response;
           res.request_focus();
 
-          // Navigation (TODO: this needs cleaning up, yuck)
-          if ui.input(|i| {
-            i.key_released(Key::ArrowDown)
-              || (!i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
-          }) {
+          // Navigation
+          if ui.input(is_nav_down) {
             self.selected = (self.selected + 1).min(self.options.len().checked_sub(1).unwrap_or(0));
           }
-          if ui.input(|i| {
-            i.key_released(Key::ArrowUp)
-              || (i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
-          }) {
+          if ui.input(is_nav_up) {
             self.selected = self.selected.checked_sub(1).unwrap_or(0);
           }
 
@@ -200,6 +194,16 @@ impl eframe::App for LyraUi {
         });
       });
   }
+}
+
+fn is_nav_down(i: &InputState) -> bool {
+  i.key_released(Key::ArrowDown)
+    || (!i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
+}
+
+fn is_nav_up(i: &InputState) -> bool {
+  i.key_released(Key::ArrowUp)
+    || (i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
 }
 
 fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: bool) -> TextEdit {
