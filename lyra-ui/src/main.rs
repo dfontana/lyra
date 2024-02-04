@@ -5,7 +5,7 @@ mod logs;
 mod plugin_manager;
 
 use anyhow::anyhow;
-use eframe::egui;
+use eframe::{egui, Frame};
 use egui::{
   Align, Color32, Event, EventFilter, FontId, IconData, Image, InputState, Key, Modifiers,
   RichText, TextBuffer, TextEdit, Ui, ViewportBuilder,
@@ -15,6 +15,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
+use tracing::error;
 use tray_icon::TrayIcon;
 use tray_icon::{
   menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
@@ -113,7 +114,7 @@ impl eframe::App for LyraUi {
     }
 
     let window_decor = egui::Frame {
-      fill: Color32::TRANSPARENT,
+      fill: Color32::WHITE,
       rounding: 5.0.into(),
       stroke: ctx.style().visuals.widgets.noninteractive.fg_stroke,
       outer_margin: 0.5.into(), // so the stroke is within the bounds
@@ -126,11 +127,11 @@ impl eframe::App for LyraUi {
         let padding = 4.0;
         let rect = ui.max_rect().shrink(padding);
         let mut ui = ui.child_ui(rect, *ui.layout());
+        ui.visuals_mut().override_text_color = Some(Color32::DARK_GRAY);
+        ui.style_mut().override_font_id = Some(FontId::new(16.0, egui::FontFamily::Monospace));
 
         ui.vertical_centered(|ui| {
-          // TODO: Only render frame on the selected option and invert the colors. Distinguish this one
-          //       differently
-          let res = mk_text_edit(&mut self.input, false, true).show(ui).response;
+          let res = mk_text_edit(&mut self.input).show(ui).response;
           res.request_focus();
 
           // Navigation
@@ -143,22 +144,35 @@ impl eframe::App for LyraUi {
           // TODO handle enter action
 
           if res.changed() {
-            // TODO: Perform calc if calc'ing
             // TODO: Perform templating if templating
             self.options = launcher::search(&self.launcher, &self.input);
             self.selected = 0;
           }
 
+          // TODO: Extract all styles to object on app so they can be set from
+          //       once place as "constants"
           // TODO: Eventually can defer UI behavior to each plugin tbh
+          // TODO: Find a better interface than Value.
           for (idx, (plugin_name, opt)) in self.options.iter().enumerate() {
-            match plugin_name.as_str() {
-              // TODO: Calc should be set as selected so the action can be taken
-              "calc" => mk_calc(ui, opt, &self.input),
-              // TODO: Handle the other AppLaunch/Launcher response shapes. Maybe find a better interface than Value.
-              "apps" | "webq" => mk_apps(idx, self.selected, ui, opt),
-              // TODO: Don't panic here but log+continue
-              _ => panic!("Unknown plugin: {}", plugin_name),
+            let mut fm = egui::Frame::none().inner_margin(4.0).rounding(2.0);
+            if idx == self.selected {
+              fm = fm.fill(Color32::from_hex("#54e6ae").unwrap());
             }
+            fm.show(ui, |ui| {
+              if idx == self.selected {
+                ui.style_mut().visuals.override_text_color = Some(Color32::WHITE);
+              }
+              match plugin_name.as_str() {
+                "calc" => mk_calc(ui, opt, &self.input),
+                "apps" => mk_app_res(ui, opt),
+                // TODO: Can likely find a better thing to render here
+                "webq" => mk_app_res(ui, opt),
+                unk => {
+                  error!("Unknown plugin: {}", unk);
+                }
+              };
+              ui.set_width(ui.available_width());
+            });
           }
 
           if res.changed() {
@@ -227,7 +241,7 @@ fn mk_calc(ui: &mut Ui, opt: &Value, inp: &str) {
   });
 }
 
-fn mk_apps(idx: usize, selected: usize, ui: &mut Ui, opt: &Value) {
+fn mk_app_res(ui: &mut Ui, opt: &Value) {
   let obj = opt.as_object();
 
   let label = obj
@@ -249,8 +263,6 @@ fn mk_apps(idx: usize, selected: usize, ui: &mut Ui, opt: &Value) {
     .and_then(|s| convert::decode_bytes(&s));
 
   ui.horizontal(|ui| {
-    // TODO: Can we render the entire row's background instead of just text edit frame?
-    //       Can then just render frame on the input
     if let Ok(img) = icon {
       ui.add(
         Image::from_bytes(format!("bytes://{}.png", label.to_string()), img)
@@ -258,23 +270,19 @@ fn mk_apps(idx: usize, selected: usize, ui: &mut Ui, opt: &Value) {
           .shrink_to_fit(),
       );
     }
-    // TODO: Probably a better widget for this than text edit
-    mk_text_edit(&mut label.to_string(), idx == selected, true).show(ui);
+    ui.label(mk_text(label));
   });
 }
 
-fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: bool) -> TextEdit {
+fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer) -> TextEdit {
   TextEdit::singleline(text)
     .desired_width(f32::INFINITY)
     .margin((0.0, 2.0).into())
-    // TODO: User entered FontDefinition with fallback
-    .font(FontId::new(16.0, egui::FontFamily::Monospace))
-    .text_color(Color32::WHITE)
     .clip_text(true)
     .cursor_at_end(true)
     .vertical_align(Align::Center)
-    .frame(selected)
-    .interactive(interactive)
+    .frame(false)
+    .interactive(true)
     .event_filter(EventFilter {
       tab: false,
       horizontal_arrows: true,
@@ -284,7 +292,7 @@ fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: b
 }
 
 fn mk_text(text: impl Into<String>) -> RichText {
-  RichText::new(text).font(FontId::new(16.0, egui::FontFamily::Monospace))
+  RichText::new(text)
 }
 
 fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {
