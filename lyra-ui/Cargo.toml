@@ -9,12 +9,6 @@ default-run = "lyra-ui"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[profile.release]
-panic = "abort" # Strip expensive panic clean-up logic
-codegen-units = 1 # Compile crates one after another so the compiler can optimize better
-lto = true # Enables link to optimizations
-opt-level = "s" # Optimize for binary size
-strip = true
 
 [dependencies]
 lyra-plugin = { path = "../lyra-plugin" }
@@ -27,7 +21,7 @@ base64 = {workspace = true}
 chrono = "0.4.31"
 derive_builder = "0.12.0"
 eframe = "0.25.0"
-egui = "0.25.0"
+egui = {workspace = true}
 global-hotkey = "0.4.2"
 itertools = "0.12.0"
 image = "0.24.0"

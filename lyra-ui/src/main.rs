@@ -6,7 +6,10 @@ mod plugin_manager;
 
 use anyhow::anyhow;
 use eframe::egui;
-use egui::{Align, Color32, Event, FontId, IconData, Key, TextBuffer, TextEdit, ViewportBuilder};
+use egui::{
+  Align, Color32, Event, EventFilter, FontId, IconData, Key, Modifiers, TextBuffer, TextEdit,
+  ViewportBuilder,
+};
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 use serde_json::Value;
 use std::sync::Arc;
@@ -69,6 +72,7 @@ struct LyraUi {
   launcher: Launcher,
   input: String,
   options: Vec<(String, Value)>,
+  selected: usize,
 }
 
 struct LyraUiBuilder {
@@ -85,6 +89,7 @@ impl LyraUiBuilder {
       launcher: self.launcher,
       input: "".into(),
       options: Vec::new(),
+      selected: 0,
     }
   }
 }
@@ -122,24 +127,40 @@ impl eframe::App for LyraUi {
         let mut ui = ui.child_ui(rect, *ui.layout());
 
         ui.vertical_centered(|ui| {
-          // TODO: Only render frame on the selected option and invert the colors
-          let res = mk_text_row(&mut self.input, true, true).show(ui).response;
-
-          // TODO: This will prevent any interactions from changing focus, but that might be fine.
-          // You can also surrender focus as needed.
+          // TODO: Only render frame on the selected option and invert the colors. Distinguish this one
+          //       differently
+          let res = mk_text_row(&mut self.input, false, true).show(ui).response;
           res.request_focus();
 
+          // Navigation (TODO: this needs cleaning up, yuck)
+          if ui.input(|i| {
+            i.key_released(Key::ArrowDown)
+              || (!i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
+          }) {
+            self.selected = (self.selected + 1).min(self.options.len().checked_sub(1).unwrap_or(0));
+          }
+          if ui.input(|i| {
+            i.key_released(Key::ArrowUp)
+              || (i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
+          }) {
+            self.selected = self.selected.checked_sub(1).unwrap_or(0);
+          }
+
           if res.changed() {
-            // TODO: Perform search if searching
             // TODO: Perform calc if calc'ing
             // TODO: Perform templating if templating
             self.options = launcher::search(&self.launcher, &self.input);
+            self.selected = 0;
           }
 
           // TODO: Can compute/layout this better by using actual occupied rect
           //       and having the input row be a parent to these
-          for (pvn, opt) in self.options.iter() {
-            mk_text_row(&mut "a result".to_string(), true, true).show(ui);
+          for (idx, (pvn, opt)) in self.options.iter().enumerate() {
+            // TODO: Need to render these options correctly; how to render icons? child_ui that's horizontal/manual layout?
+            // Images look viable as their own widget & just pulling the bytes instead of data uris
+            // https://docs.rs/egui/latest/egui/widgets/struct.Image.html (for now you can just strip the prefixes & remove
+            // base64 encoding? Unless there's a way to still render that)
+            mk_text_row(&mut "a result".to_string(), idx == self.selected, true).show(ui);
           }
 
           if res.changed() {
@@ -164,6 +185,12 @@ fn mk_text_row<'t>(text: &'t mut dyn TextBuffer, selected: bool, interactive: bo
     .vertical_align(Align::Center)
     .frame(selected)
     .interactive(interactive)
+    .event_filter(EventFilter {
+      tab: false,
+      horizontal_arrows: true,
+      vertical_arrows: false,
+      ..Default::default()
+    })
 }
 
 fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {
@@ -183,6 +210,7 @@ fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {
     }
 
     if let Ok(event) = mu_receiver.try_recv() {
+      // TODO: Open the settings frame, which will need to be built out & added into update loop.
       println!("menu event: {:?}", event);
     }
     std::thread::sleep(Duration::from_millis(100));
