@@ -38,6 +38,19 @@ fn main() -> anyhow::Result<()> {
   let toggle_hk_id = hotkey_toggle.id();
   let _ = manager.register(hotkey_toggle);
 
+  // Note must hold a Rc<RefCell<>> on for the Tray to stay alive/active
+  // On linux, this requires using GTK and not winit, which forces this
+  #[cfg(target_os = "linux")]
+  std::thread::spawn(|| {
+    gtk::init().unwrap();
+    let _tray_handle = mk_system_tray().build().unwrap();
+    gtk::main();
+  });
+  #[cfg(not(target_os = "linux"))]
+  let mut _tray_handle = Rc::new(RefCell::new(None));
+  #[cfg(not(target_os = "linux"))]
+  let _tray_ref = _tray_handle.clone();
+
   eframe::run_native(
     "Lyra",
     eframe::NativeOptions {
@@ -53,8 +66,12 @@ fn main() -> anyhow::Result<()> {
     Box::new(move |cc| {
       init_event_listeners(cc.egui_ctx.clone(), toggle_hk_id);
       egui_extras::install_image_loaders(&cc.egui_ctx);
-      // Note the tray must be built in this thread or it doesn't work
-      Box::new(bld.build(mk_system_tray().build().unwrap()))
+      // Note the tray must be built in this thread or it doesn't work (non-linux)
+      #[cfg(not(target_os = "linux"))]
+      _tray_ref
+        .borrow_mut()
+        .replace(mk_system_tray().build().unwrap());
+      Box::new(bld.build())
     }),
   )
   .map_err(|err| anyhow!("{}", err))
@@ -62,6 +79,11 @@ fn main() -> anyhow::Result<()> {
 
 fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   logs::init_logs()?;
+  // TODO: Now that we're under one app, can we just put all the plugin
+  //       configs writing to dedicated tables in the TOML?
+  // TODO: The default config needs more things setup (like plugins, & prefixes in calc)
+  //       Alternatively need to display a message when no plugins are active, but better
+  //       to have defaults.
   let config = Config::get_or_init_config().map(Arc::new)?;
   let plugins = PluginManager::init(config.clone())?;
   Ok(LyraUiBuilder {
@@ -73,8 +95,6 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
 }
 
 struct LyraUi {
-  // Note must hold a Rc<RefCell<>> on for the Tray to stay alive/active
-  _system_tray: Rc<RefCell<TrayIcon>>,
   config: Arc<Config>,
   plugins: PluginManager,
   launcher: Launcher,
@@ -91,9 +111,8 @@ struct LyraUiBuilder {
   pub clipboard: Clipboard,
 }
 impl LyraUiBuilder {
-  fn build(self, system_tray: TrayIcon) -> LyraUi {
+  fn build(self) -> LyraUi {
     LyraUi {
-      _system_tray: Rc::new(RefCell::new(system_tray)),
       config: self.config,
       plugins: self.plugins,
       launcher: self.launcher,
@@ -112,6 +131,9 @@ impl eframe::App for LyraUi {
   }
 
   fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    // Window does not play well auto-hiding on focus loss on Linux, so we'll
+    // leave it as open until manually closed
+    #[cfg(not(target_os = "linux"))]
     if ctx.input(|is| is.events.iter().any(|e| *e == Event::WindowFocused(false))) {
       close_window(ctx, false);
       return;
@@ -336,6 +358,8 @@ fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {
       }
     }
 
+    // BUG: (Linux) -> https://github.com/tauri-apps/tray-icon/issues/104
+    // tl;dr - Tray Click events don't work and actually segfault.
     if let Ok(event) = mu_receiver.try_recv() {
       // TODO: Open the settings frame, which will need to be built out & added into update loop.
       println!("menu event: {:?}", event);
@@ -351,6 +375,8 @@ fn close_window(ctx: &egui::Context, vis: bool) {
   // suffers from this so it's not a regression with using EGUI but instead
   // something else entirely that apps like Alfred & Raycast don't experience.
   // Will need more research.
+  // BUG: Linux -> Sometimes (not always) the app doesn't want to revive. It's
+  // either the global hotkey has died, or something wrong here. Need more debug
   ctx.send_viewport_cmd(egui::ViewportCommand::Visible(vis));
   if vis {
     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
