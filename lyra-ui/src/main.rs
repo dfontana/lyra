@@ -5,12 +5,13 @@ mod logs;
 mod plugin_manager;
 
 use anyhow::anyhow;
-use eframe::{egui, EventLoopBuilderHook, Frame};
+use arboard::Clipboard;
 use egui::{
   Align, Color32, Event, EventFilter, FontId, IconData, Image, InputState, Key, Modifiers,
   RichText, TextBuffer, TextEdit, Ui, ViewportBuilder,
 };
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
+use once_cell::sync::Lazy;
 use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
@@ -27,10 +28,6 @@ use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
 use config::{Config, Placement, Styles};
 use launcher::Launcher;
 use plugin_manager::PluginManager;
-
-// TODO Move these into styles & pass around
-const ROW_HEIGHT: f32 = 32.0;
-const APP_WIDTH: f32 = 600.0;
 
 fn main() -> anyhow::Result<()> {
   let bld = setup_app()?;
@@ -71,6 +68,7 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
     config: config.clone(),
     plugins: plugins.clone(),
     launcher: Launcher::new(config, plugins),
+    clipboard: Clipboard::new()?,
   })
 }
 
@@ -80,6 +78,7 @@ struct LyraUi {
   config: Arc<Config>,
   plugins: PluginManager,
   launcher: Launcher,
+  clipboard: Clipboard,
   input: String,
   options: Vec<(String, Value)>,
   selected: usize,
@@ -89,6 +88,7 @@ struct LyraUiBuilder {
   pub config: Arc<Config>,
   pub plugins: PluginManager,
   pub launcher: Launcher,
+  pub clipboard: Clipboard,
 }
 impl LyraUiBuilder {
   fn build(self, system_tray: TrayIcon) -> LyraUi {
@@ -97,6 +97,7 @@ impl LyraUiBuilder {
       config: self.config,
       plugins: self.plugins,
       launcher: self.launcher,
+      clipboard: self.clipboard,
       input: "".into(),
       options: Vec::new(),
       selected: 0,
@@ -149,7 +150,25 @@ impl eframe::App for LyraUi {
           if ui.input(is_nav_up) {
             self.selected = self.selected.checked_sub(1).unwrap_or(0);
           }
-          // TODO handle enter action
+          if ui.input(|i| i.key_released(Key::Enter)) {
+            if let Some((pv, opt)) = self.options.get(self.selected) {
+              let value = match pv.as_str() {
+                "calc" => opt.get("Ok").unwrap(),
+                "apps" => opt,
+                // TODO: Need to impl templating extraction
+                _ => return,
+              };
+              if let Err(e) = launcher::submit(
+                &mut self.clipboard,
+                &self.launcher,
+                pv.clone(),
+                value.clone(),
+                || close_window(ctx, false),
+              ) {
+                error!("{:?}", e);
+              }
+            }
+          }
 
           if res.changed() {
             // TODO: Perform templating if templating
@@ -157,7 +176,7 @@ impl eframe::App for LyraUi {
             self.selected = 0;
           }
 
-          // TODO: Extract all styles to object on app so they can be set from
+          // TODO: Extract all styles & sizes/paddings to object on app so they can be set from
           //       once place as "constants"
           // TODO: Eventually can defer UI behavior to each plugin tbh
           // TODO: Find a better interface than Value.
@@ -184,8 +203,6 @@ impl eframe::App for LyraUi {
           }
 
           if res.changed() {
-            // TODO: Can compute/layout this better by using actual occupied rect
-            //       and having the input row be a parent to these
             let height = ui.min_rect().height() + (padding * 2.0);
             let width = ui.min_rect().width() + (padding * 2.0);
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize([width, height].into()));
@@ -341,12 +358,6 @@ fn close_window(ctx: &egui::Context, vis: bool) {
 }
 
 fn mk_system_tray() -> TrayIconBuilder {
-  // TODO: You'll want to include_bytes this so it's in the final binary
-  let tray_icon = load_icon(std::path::Path::new(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/icons/app-icon.png"
-  )));
-
   let menu_bar = Menu::new();
   let _ = menu_bar.append_items(&[
     &MenuItem::with_id("settings", "Settings", true, None),
@@ -355,7 +366,7 @@ fn mk_system_tray() -> TrayIconBuilder {
   TrayIconBuilder::new()
     .with_menu(Box::new(menu_bar))
     .with_tooltip("Lyra")
-    .with_icon(tray_icon)
+    .with_icon(APP_ICON.clone())
 }
 
 fn mk_viewport(cfg: Arc<Config>) -> ViewportBuilder {
@@ -363,11 +374,6 @@ fn mk_viewport(cfg: Arc<Config>) -> ViewportBuilder {
     window_placement, ..
   } = cfg.get().styles;
 
-  // TODO: include_bytes! style pls
-  let icon = load_icon_data(std::path::Path::new(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/icons/app-icon-alt.png"
-  )));
   let mut bld = egui::ViewportBuilder::default()
     .with_resizable(false)
     .with_always_on_top()
@@ -376,9 +382,10 @@ fn mk_viewport(cfg: Arc<Config>) -> ViewportBuilder {
     .with_transparent(true)
     .with_active(true)
     .with_visible(true)
-    .with_icon(icon)
-    .with_min_inner_size([APP_WIDTH, ROW_HEIGHT])
-    .with_inner_size([APP_WIDTH, ROW_HEIGHT]);
+    .with_icon(APP_ICON_ALT.clone())
+    // TODO: Pull from config
+    .with_min_inner_size([600.0, 32.0])
+    .with_inner_size([600.0, 32.0]);
   match window_placement {
     Placement::XY(x, y) => {
       bld = bld.with_position([x, y]);
@@ -391,27 +398,25 @@ fn _mk_settings() {
   // TODO: Need to make the settings page
 }
 
-fn load_icon(path: &std::path::Path) -> tray_icon::Icon {
-  let (icon_rgba, icon_width, icon_height) = {
-    let image = image::open(path)
-      .expect("Failed to open icon path")
-      .into_rgba8();
-    let (width, height) = image.dimensions();
-    let rgba = image.into_raw();
-    (rgba, width, height)
-  };
-  tray_icon::Icon::from_rgba(icon_rgba, icon_width, icon_height).expect("Failed to open icon")
-}
+static APP_ICON_ALT: Lazy<IconData> = Lazy::new(|| {
+  load_image(
+    include_bytes!("../icons/app-icon-alt.png"),
+    |width, height, rgba| IconData {
+      width,
+      height,
+      rgba,
+    },
+  )
+});
+static APP_ICON: Lazy<tray_icon::Icon> = Lazy::new(|| {
+  load_image(include_bytes!("../icons/app-icon.png"), |w, h, v| {
+    tray_icon::Icon::from_rgba(v, w, h).unwrap()
+  })
+});
 
-fn load_icon_data(path: &std::path::Path) -> IconData {
-  // TODO: This icon is bigger in the doc than others, need to look into what size it should be
-  let image = image::open(path)
-    .expect("Failed to open icon path")
-    //.rescale(...) to change the size or pick a diff source image
+fn load_image<T>(bytes: &[u8], bld: impl FnOnce(u32, u32, Vec<u8>) -> T) -> T {
+  let image = image::load_from_memory(bytes)
+    .expect("Failed to parse image")
     .into_rgba8();
-  IconData {
-    width: image.width(),
-    height: image.height(),
-    rgba: image.into_raw(),
-  }
+  bld(image.width(), image.height(), image.into_raw())
 }

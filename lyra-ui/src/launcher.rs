@@ -70,7 +70,7 @@ pub fn search(launcher: &Launcher, search: &String) -> Vec<(PluginName, Value)> 
 
 pub fn submit(
   clipboard: &mut Clipboard,
-  launcher: Launcher,
+  launcher: &Launcher,
   for_plugin: PluginName,
   selected: Value,
   close_app: impl FnOnce(),
