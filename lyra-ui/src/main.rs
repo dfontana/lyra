@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 use tracing::error;
-use tray_icon::TrayIcon;
 use tray_icon::{
   menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
   TrayIconBuilder,
@@ -94,6 +93,111 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   })
 }
 
+fn get_shortname<'a>(v: &'a Value) -> Option<&'a str> {
+  v.as_object()
+    .and_then(|m| m.get("shortname"))
+    .and_then(|v| v.as_str())
+}
+
+fn get_required_args(v: &Value) -> Option<usize> {
+  v.as_object()
+    .and_then(|m| m.get("required_args"))
+    .and_then(|v| v.as_u64())
+    .map(|v| v as usize)
+}
+
+fn is_default_search(shortname: &str) -> bool {
+  shortname.is_empty()
+}
+
+fn is_bookmark(v: &Value) -> bool {
+  get_required_args(v).filter(|n| *n == 0).is_some()
+}
+
+fn extract_args<'a>(v: &'a Value, input: &'a str) -> Option<(Vec<&'a str>, usize)> {
+  if get_shortname(v)
+    .filter(|sn| is_default_search(sn))
+    .and(Some(input).filter(|i| !i.is_empty()))
+    .is_some()
+  {
+    return Some((vec![input], 0));
+  }
+  get_required_args(v).map(|rq| {
+    (
+      input.trim().splitn(rq + 1, ' ').skip(1).collect::<Vec<_>>(),
+      rq,
+    )
+  })
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum TemplatingState {
+  NotStarted,
+  Started,
+  Complete,
+}
+
+impl TemplatingState {
+  fn templating(&self) -> bool {
+    *self != TemplatingState::NotStarted
+  }
+
+  fn is_complete(&self) -> bool {
+    *self == TemplatingState::Complete
+  }
+
+  fn compute(&mut self, selected: Option<&(String, Value)>, input: &str) -> bool {
+    match self {
+      TemplatingState::NotStarted => {
+        if self.is_templating_started(selected, input) {
+          *self = TemplatingState::Started;
+          return true;
+        } else if self.is_templating_complete(selected, input) {
+          *self = TemplatingState::Complete;
+        }
+      }
+      TemplatingState::Started => {
+        if !self.is_templating_started(selected, input) {
+          *self = TemplatingState::NotStarted;
+        } else if self.is_templating_complete(selected, input) {
+          *self = TemplatingState::Complete;
+        }
+      }
+      TemplatingState::Complete => {
+        if !self.is_templating_complete(selected, input) {
+          *self = TemplatingState::Started;
+        }
+      }
+    };
+    false
+  }
+
+  fn is_templating_started(&self, selected: Option<&(String, Value)>, input: &str) -> bool {
+    let Some((_, pv)) = selected else {
+      return false;
+    };
+    if is_bookmark(pv) {
+      return false;
+    }
+    let Some(sn) = get_shortname(pv) else {
+      return false;
+    };
+    !is_default_search(sn) && input.starts_with(sn) && input.contains(" ")
+  }
+
+  fn is_templating_complete(&self, selected: Option<&(String, Value)>, input: &str) -> bool {
+    let Some((_, pv)) = selected else {
+      return false;
+    };
+    if is_bookmark(pv) {
+      return false;
+    }
+    extract_args(pv, input)
+      .filter(|(args, required)| args.len() == *required)
+      .is_some()
+  }
+}
+
 struct LyraUi {
   config: Arc<Config>,
   plugins: PluginManager,
@@ -102,6 +206,7 @@ struct LyraUi {
   input: String,
   options: Vec<(String, Value)>,
   selected: usize,
+  templating: TemplatingState,
 }
 
 struct LyraUiBuilder {
@@ -120,7 +225,34 @@ impl LyraUiBuilder {
       input: "".into(),
       options: Vec::new(),
       selected: 0,
+      templating: TemplatingState::NotStarted,
     }
+  }
+}
+
+impl LyraUi {
+  fn reset_state(&mut self) {
+    self.input = "".into();
+    self.options = Vec::new();
+    self.selected = 0;
+    self.templating = TemplatingState::NotStarted;
+  }
+
+  fn update_template_state(&mut self) {
+    // TODO: This is buggy ->
+    //   - The selected option might not be the one that's actually matching
+    //     the template prefix typed into input
+    //   - Once templating starts we need to be filtering to only exact matches
+    //     and not "starts_with" matches
+    //   - ^^ Notice I said matches and not singular match. Fix that too.
+    if self
+      .templating
+      .compute(self.options.get(self.selected), &self.input)
+    {
+      self.selected = 0;
+      self.options = vec![self.options[self.selected].clone()];
+    }
+    println!("{:?} -> {:?}", self.templating, self.input);
   }
 }
 
@@ -142,6 +274,55 @@ impl eframe::App for LyraUi {
     if ctx.input(|i| i.key_pressed(Key::Escape)) {
       close_window(ctx, false);
       return;
+    }
+    if ctx.input(is_nav_down) {
+      self.selected = (self.selected + 1).min(self.options.len().checked_sub(1).unwrap_or(0));
+      self.update_template_state();
+    }
+    if ctx.input(is_nav_up) {
+      self.selected = self.selected.checked_sub(1).unwrap_or(0);
+      self.update_template_state();
+    }
+
+    if ctx.input(|i| i.key_released(Key::Enter)) {
+      if let Some((pv, opt)) = self.options.get(self.selected) {
+        let value = match pv.as_str() {
+          "calc" => opt.get("Ok").unwrap().clone(),
+          "apps" => opt.clone(),
+          "webq" if self.templating.is_complete() || is_bookmark(opt) => {
+            let (args, _) = extract_args(opt, &self.input).unwrap();
+            opt
+              .as_object()
+              .map(|m| {
+                let mut m = m.clone();
+                m.insert(
+                  "args".into(),
+                  Value::Array(args.iter().map(|v| Value::String(v.to_string())).collect()),
+                );
+                Value::Object(m)
+              })
+              .unwrap()
+          }
+          "webq" => {
+            // TODO: Would be nice to enter templating mode on the selected
+            //       item, which will require updating the input to be the prefix
+            //       + a space & then updating template state
+            return;
+          }
+          _ => return,
+        };
+        if let Err(e) = launcher::submit(
+          &mut self.clipboard,
+          &self.launcher,
+          pv.clone(),
+          value,
+          || close_window(ctx, false),
+        ) {
+          error!("{:?}", e);
+        } else {
+          self.reset_state();
+        }
+      }
     }
 
     let window_decor = egui::Frame {
@@ -165,37 +346,13 @@ impl eframe::App for LyraUi {
           let res = mk_text_edit(&mut self.input).show(ui).response;
           res.request_focus();
 
-          // Navigation
-          if ui.input(is_nav_down) {
-            self.selected = (self.selected + 1).min(self.options.len().checked_sub(1).unwrap_or(0));
-          }
-          if ui.input(is_nav_up) {
-            self.selected = self.selected.checked_sub(1).unwrap_or(0);
-          }
-          if ui.input(|i| i.key_released(Key::Enter)) {
-            if let Some((pv, opt)) = self.options.get(self.selected) {
-              let value = match pv.as_str() {
-                "calc" => opt.get("Ok").unwrap(),
-                "apps" => opt,
-                // TODO: Need to impl templating extraction
-                _ => return,
-              };
-              if let Err(e) = launcher::submit(
-                &mut self.clipboard,
-                &self.launcher,
-                pv.clone(),
-                value.clone(),
-                || close_window(ctx, false),
-              ) {
-                error!("{:?}", e);
-              }
-            }
-          }
-
           if res.changed() {
-            // TODO: Perform templating if templating
-            self.options = launcher::search(&self.launcher, &self.input);
-            self.selected = 0;
+            self.update_template_state();
+            if !self.templating.templating() {
+              self.options = launcher::search(&self.launcher, &self.input);
+              self.selected = 0;
+              self.update_template_state();
+            }
           }
 
           // TODO: Extract all styles & sizes/paddings to object on app so they can be set from
@@ -214,7 +371,6 @@ impl eframe::App for LyraUi {
               match plugin_name.as_str() {
                 "calc" => mk_calc(ui, opt, &self.input),
                 "apps" => mk_app_res(ui, opt),
-                // TODO: Can likely find a better thing to render here
                 "webq" => mk_app_res(ui, opt),
                 unk => {
                   error!("Unknown plugin: {}", unk);
@@ -302,23 +458,36 @@ fn mk_app_res(ui: &mut Ui, opt: &Value) {
     .filter(|m| m.contains_key("icon"))
     .and_then(|m| m.get("icon"))
     .and_then(|v| v.as_str())
-    .and_then(|s| {
-      s.strip_prefix("data:image/png;base64,")
-        .map(|s| s.to_owned())
-    })
+    .and_then(parse_image_data)
     .ok_or(anyhow!("TODO: Non-PNG support"))
-    .and_then(|s| convert::decode_bytes(&s));
+    .and_then(|(s, ext)| convert::decode_bytes(&s).map(|b| (b, ext)));
 
   ui.horizontal(|ui| {
-    if let Ok(img) = icon {
+    if let Ok((img, ext)) = icon {
       ui.add(
-        Image::from_bytes(format!("bytes://{}.png", label.to_string()), img)
+        Image::from_bytes(format!("bytes://{}.{}", label.to_string(), ext), img)
           .maintain_aspect_ratio(true)
           .shrink_to_fit(),
       );
     }
     ui.label(mk_text(label));
   });
+}
+
+// TODO: Eventually do away with this as we'll want to just natively
+// integrate, but config is currently all data url based. Ideally just use
+// PNG since they seem to render cleaner
+fn parse_image_data(s: &str) -> Option<(String, String)> {
+  let prefixes = vec![
+    ("image/svg+xml", "svg"),
+    ("image/png", "png"),
+    ("image/vnd.microsoft.icon", "ico"),
+    ("image/jpeg", "jpg"),
+  ];
+  prefixes.iter().find_map(|(pf, ext)| {
+    s.strip_prefix(&format!("data:{};base64,", pf))
+      .map(|s| (s.to_string(), ext.to_string()))
+  })
 }
 
 fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer) -> TextEdit {
