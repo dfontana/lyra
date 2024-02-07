@@ -2600,10 +2600,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 
 [[package]]
+name = "lyra-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "egui",
+ "reqwest",
+ "tracing",
+]
+
+[[package]]
 name = "lyra-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "egui",
  "nucleo-matcher",
  "parking_lot",
  "serde",
@@ -2618,6 +2630,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
+ "egui",
  "glob",
  "icns",
  "lyra-plugin",
@@ -2636,6 +2649,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "calc",
+ "egui",
  "lalrpop-util",
  "lyra-plugin",
  "parking_lot",
@@ -2650,6 +2664,8 @@ name = "lyra-plugin-webq"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "egui",
+ "lyra-common",
  "lyra-plugin",
  "open",
  "parking_lot",
@@ -2682,7 +2698,6 @@ dependencies = [
  "nucleo-matcher",
  "once_cell",
  "parking_lot",
- "reqwest",
  "serde",
  "serde_json",
  "toml",

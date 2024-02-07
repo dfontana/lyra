@@ -1,5 +1,4 @@
 mod config;
-mod convert;
 mod launcher;
 mod logs;
 mod plugin_manager;
@@ -11,6 +10,7 @@ use egui::{
   RichText, TextBuffer, TextEdit, Ui, ViewportBuilder,
 };
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
+use lyra_plugin::{AppState, OkAction};
 use once_cell::sync::Lazy;
 use serde_json::Value;
 use std::sync::Arc;
@@ -93,122 +93,12 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   })
 }
 
-fn get_shortname<'a>(v: &'a Value) -> Option<&'a str> {
-  v.as_object()
-    .and_then(|m| m.get("shortname"))
-    .and_then(|v| v.as_str())
-}
-
-fn get_required_args(v: &Value) -> Option<usize> {
-  v.as_object()
-    .and_then(|m| m.get("required_args"))
-    .and_then(|v| v.as_u64())
-    .map(|v| v as usize)
-}
-
-fn is_default_search(shortname: &str) -> bool {
-  shortname.is_empty()
-}
-
-fn is_bookmark(v: &Value) -> bool {
-  get_required_args(v).filter(|n| *n == 0).is_some()
-}
-
-fn extract_args<'a>(v: &'a Value, input: &'a str) -> Option<(Vec<&'a str>, usize)> {
-  if get_shortname(v)
-    .filter(|sn| is_default_search(sn))
-    .and(Some(input).filter(|i| !i.is_empty()))
-    .is_some()
-  {
-    return Some((vec![input], 0));
-  }
-  get_required_args(v).map(|rq| {
-    (
-      input.trim().splitn(rq + 1, ' ').skip(1).collect::<Vec<_>>(),
-      rq,
-    )
-  })
-}
-
-// TODO: This TemplatingState concept is best moved to the WebQ plugin where the templating
-// code lives; and exposed as some pure functions
-#[derive(Debug, PartialEq, Eq)]
-enum TemplatingState {
-  NotStarted,
-  Started,
-  Complete,
-}
-
-impl TemplatingState {
-  fn templating(&self) -> bool {
-    *self != TemplatingState::NotStarted
-  }
-
-  fn is_complete(&self) -> bool {
-    *self == TemplatingState::Complete
-  }
-
-  fn compute(&mut self, selected: Option<&(String, Value)>, input: &str) -> bool {
-    match self {
-      TemplatingState::NotStarted => {
-        if self.is_templating_started(selected, input) {
-          *self = TemplatingState::Started;
-          return true;
-        } else if self.is_templating_complete(selected, input) {
-          *self = TemplatingState::Complete;
-        }
-      }
-      TemplatingState::Started => {
-        if !self.is_templating_started(selected, input) {
-          *self = TemplatingState::NotStarted;
-        } else if self.is_templating_complete(selected, input) {
-          *self = TemplatingState::Complete;
-        }
-      }
-      TemplatingState::Complete => {
-        if !self.is_templating_complete(selected, input) {
-          *self = TemplatingState::Started;
-        }
-      }
-    };
-    false
-  }
-
-  fn is_templating_started(&self, selected: Option<&(String, Value)>, input: &str) -> bool {
-    let Some((_, pv)) = selected else {
-      return false;
-    };
-    if is_bookmark(pv) {
-      return false;
-    }
-    let Some(sn) = get_shortname(pv) else {
-      return false;
-    };
-    !is_default_search(sn) && input.starts_with(sn) && input.contains(" ")
-  }
-
-  fn is_templating_complete(&self, selected: Option<&(String, Value)>, input: &str) -> bool {
-    let Some((_, pv)) = selected else {
-      return false;
-    };
-    if is_bookmark(pv) {
-      return false;
-    }
-    extract_args(pv, input)
-      .filter(|(args, required)| args.len() == *required)
-      .is_some()
-  }
-}
-
 struct LyraUi {
   config: Arc<Config>,
   plugins: PluginManager,
   launcher: Launcher,
   clipboard: Clipboard,
-  input: String,
-  options: Vec<(String, Value)>,
-  selected: usize,
-  templating: TemplatingState,
+  state: AppState,
 }
 
 struct LyraUiBuilder {
@@ -224,37 +114,46 @@ impl LyraUiBuilder {
       plugins: self.plugins,
       launcher: self.launcher,
       clipboard: self.clipboard,
-      input: "".into(),
-      options: Vec::new(),
-      selected: 0,
-      templating: TemplatingState::NotStarted,
+      state: AppState::default(),
     }
   }
 }
 
+trait Launchable {}
+
 impl LyraUi {
   fn reset_state(&mut self) {
-    self.input = "".into();
-    self.options = Vec::new();
-    self.selected = 0;
-    self.templating = TemplatingState::NotStarted;
+    self.state = AppState::default();
+  }
+  // TODO: Trait for Into<FuzzyMatchItem>
+
+  fn derive_state(state: &AppState) -> Option<AppState> {
+    // TODO: Move this commented code into the webq impl
+    // // TODO: This is buggy ->
+    // //   - The selected option might not be the one that's actually matching
+    // //     the template prefix typed into input
+    // //   - Once templating starts we need to be filtering to only exact matches
+    // //     and not "starts_with" matches
+    // //   - ^^ Notice I said matches and not singular match. Fix that too.
+    // if self.templating.compute(
+    //   self.state.options.get(self.state.selected),
+    //   &self.state.input,
+    // ) {
+    //   self.state.selected = 0;
+    //   self.state.options = vec![self.state.options[self.state.selected].clone()];
+    // }
+    // println!("{:?} -> {:?}", self.state.templating, self.state.input);
+    None
   }
 
-  fn update_template_state(&mut self) {
-    // TODO: This is buggy ->
-    //   - The selected option might not be the one that's actually matching
-    //     the template prefix typed into input
-    //   - Once templating starts we need to be filtering to only exact matches
-    //     and not "starts_with" matches
-    //   - ^^ Notice I said matches and not singular match. Fix that too.
-    if self
-      .templating
-      .compute(self.options.get(self.selected), &self.input)
+  fn check_plugins_for_state_updates(&mut self) {
+    if let Some(st) = self
+      .plugins
+      .iter()
+      .find_map(|p| p.derive_state(&self.state))
     {
-      self.selected = 0;
-      self.options = vec![self.options[self.selected].clone()];
+      self.state = st;
     }
-    println!("{:?} -> {:?}", self.templating, self.input);
   }
 }
 
@@ -277,52 +176,27 @@ impl eframe::App for LyraUi {
       close_window(ctx, false);
       return;
     }
+
     if ctx.input(is_nav_down) {
-      self.selected = (self.selected + 1).min(self.options.len().checked_sub(1).unwrap_or(0));
-      self.update_template_state();
+      self.state.selected =
+        (self.state.selected + 1).min(self.state.options.len().checked_sub(1).unwrap_or(0));
+      self.check_plugins_for_state_updates();
     }
+
     if ctx.input(is_nav_up) {
-      self.selected = self.selected.checked_sub(1).unwrap_or(0);
-      self.update_template_state();
+      self.state.selected = self.state.selected.checked_sub(1).unwrap_or(0);
+      self.check_plugins_for_state_updates();
     }
 
     if ctx.input(|i| i.key_released(Key::Enter)) {
-      if let Some((pv, opt)) = self.options.get(self.selected) {
-        let value = match pv.as_str() {
-          "calc" => opt.get("Ok").unwrap().clone(),
-          "apps" => opt.clone(),
-          "webq" if self.templating.is_complete() || is_bookmark(opt) => {
-            let (args, _) = extract_args(opt, &self.input).unwrap();
-            opt
-              .as_object()
-              .map(|m| {
-                let mut m = m.clone();
-                m.insert(
-                  "args".into(),
-                  Value::Array(args.iter().map(|v| Value::String(v.to_string())).collect()),
-                );
-                Value::Object(m)
-              })
-              .unwrap()
+      if let Some(opt) = self.state.selected() {
+        match opt.try_launch(&self.state) {
+          Ok(OkAction { close_win: true }) => {
+            close_window(ctx, false);
+            self.reset_state();
           }
-          "webq" => {
-            // TODO: Would be nice to enter templating mode on the selected
-            //       item, which will require updating the input to be the prefix
-            //       + a space & then updating template state
-            return;
-          }
-          _ => return,
-        };
-        if let Err(e) = launcher::submit(
-          &mut self.clipboard,
-          &self.launcher,
-          pv.clone(),
-          value,
-          || close_window(ctx, false),
-        ) {
-          error!("{:?}", e);
-        } else {
-          self.reset_state();
+          Ok(_) => self.reset_state(),
+          Err(e) => error!("{:?}", e),
         }
       }
     }
@@ -345,15 +219,20 @@ impl eframe::App for LyraUi {
         ui.style_mut().override_font_id = Some(FontId::new(16.0, egui::FontFamily::Monospace));
 
         ui.vertical_centered(|ui| {
-          let res = mk_text_edit(&mut self.input).show(ui).response;
+          let res = mk_text_edit(&mut self.state.input).show(ui).response;
           res.request_focus();
 
           if res.changed() {
-            self.update_template_state();
-            if !self.templating.templating() {
-              self.options = launcher::search(&self.launcher, &self.input);
-              self.selected = 0;
-              self.update_template_state();
+            self.check_plugins_for_state_updates();
+            if self
+              .state
+              .selected()
+              .filter(|pv| pv.blocks_search(&self.state))
+              .is_none()
+            {
+              self.state.options = launcher::search(&self.launcher, &self.state.input);
+              self.state.selected = 0;
+              self.check_plugins_for_state_updates();
             }
           }
 
@@ -361,35 +240,16 @@ impl eframe::App for LyraUi {
           //       once place as "constants"
           // TODO: Eventually can defer UI behavior to each plugin tbh
           // TODO: Find a better interface than Value; this might be a good next step.
-          //   - You could use the `Any` trait and store the plugin structs + downcast https://ysantos.com/blog/downcast-rust
-          //     - Either downcasting at each usage (ew)
-          //     - Or at handing back to the pluginManager (this is very possible; the data is disjoint and you only interact with it by itself).
-          //       The tricky part is how templating manipulates input/selected/options. You need a hook for that for any plugin to mess with (eg)
-          //       when any app state is updated, check with each plugin if it has state to update && store that on the LyraUi/replace it.
-          //   - You could implement each behavior as a trait and create a "super trait" representing something implementing each of them
-          //     then create a blanket impl on each trait w/ a no-op/default behavior. Then each plugin can opt into behavior by implementing the
-          //     trait and at each of these needed callsites invoke the beahvior on the option.
-          //     - This may have edge cases like when one case needs more data than another
-          //     - Nor does it fully grasp the templating issue.
-          //   - Perhaps its best to ditch the enabled/disabled plugins concept and just have them all enabled always; then define their core
-          //     data structures in the central plugin so it can be made to an enum
-          for (idx, (plugin_name, opt)) in self.options.iter().enumerate() {
+          for (idx, pv) in self.state.options.iter().enumerate() {
             let mut fm = egui::Frame::none().inner_margin(4.0).rounding(2.0);
-            if idx == self.selected {
+            if idx == self.state.selected {
               fm = fm.fill(Color32::from_hex("#54e6ae").unwrap());
             }
             fm.show(ui, |ui| {
-              if idx == self.selected {
+              if idx == self.state.selected {
                 ui.style_mut().visuals.override_text_color = Some(Color32::WHITE);
               }
-              match plugin_name.as_str() {
-                "calc" => mk_calc(ui, opt, &self.input),
-                "apps" => mk_app_res(ui, opt),
-                "webq" => mk_app_res(ui, opt),
-                unk => {
-                  error!("Unknown plugin: {}", unk);
-                }
-              };
+              pv.render(ui, &self.state);
               ui.set_width(ui.available_width());
             });
           }
@@ -423,7 +283,7 @@ fn mk_calc(ui: &mut Ui, opt: &Value, inp: &str) {
       .map(|s| s.trim_matches('"').to_owned());
 
     if let Some(v) = ok_result {
-      ui.label(mk_text(v));
+      ui.label(RichText::new(&v));
       return;
     }
 
@@ -446,12 +306,12 @@ fn mk_calc(ui: &mut Ui, opt: &Value, inp: &str) {
 
     match (err_start, err_end, err_msg) {
       (Some(s), Some(e), _) if s != 0 && e != 0 => {
-        ui.label(mk_text(&inp[1..s]));
-        ui.label(mk_text(&inp[s..e + 1]).color(Color32::RED));
-        ui.label(mk_text(&inp[e + 1..]));
+        ui.label(RichText::new(&inp[1..s]));
+        ui.label(RichText::new(&inp[s..e + 1]).color(Color32::RED));
+        ui.label(RichText::new(&inp[e + 1..]));
       }
       (_, _, Some(msg)) => {
-        ui.label(mk_text(msg));
+        ui.label(RichText::new(&msg));
       }
       _ => return,
     }
@@ -484,7 +344,7 @@ fn mk_app_res(ui: &mut Ui, opt: &Value) {
           .shrink_to_fit(),
       );
     }
-    ui.label(mk_text(label));
+    ui.label(RichText::new(&label));
   });
 }
 
@@ -519,10 +379,6 @@ fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer) -> TextEdit {
       vertical_arrows: false,
       ..Default::default()
     })
-}
-
-fn mk_text(text: impl Into<String>) -> RichText {
-  RichText::new(text)
 }
 
 fn init_event_listeners(ctx: egui::Context, toggle_hk_id: u32) {

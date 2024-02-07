@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+  collections::{hash_map::Values, HashMap},
+  sync::Arc,
+};
 
 use anyhow::anyhow;
 use lyra_plugin::{Plugin, PluginName};
@@ -43,6 +46,10 @@ impl PluginManager {
       .0
       .get(plug)
       .ok_or_else(|| anyhow!("Plugin {} not found", plug))
+  }
+
+  pub fn iter(&self) -> Values<'_, String, Box<dyn Plugin>> {
+    self.0.values()
   }
 
   /// Return all the serialized configs for each plugin so the UI can hydrate settings

@@ -3,7 +3,9 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use anyhow::{anyhow, Context};
 use applookup::AppLookup;
 use config::{AppCache, AppConf};
-use lyra_plugin::{Config, FuzzyMatchItem, OkAction, Plugin};
+use lyra_plugin::{
+  Config, FuzzyMatchItem, Launchable, OkAction, Plugin, PluginValue, Renderable, SearchBlocker,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -24,6 +26,11 @@ pub struct AppLaunch {
   pub icon: String,
   pub path: String,
 }
+// TODO Fill these in
+impl PluginValue for AppLaunch {}
+impl Renderable for AppLaunch {}
+impl SearchBlocker for AppLaunch {}
+impl Launchable for AppLaunch {}
 
 impl AppsPlugin {
   pub fn init(conf_dir: &PathBuf, cache_dir: &PathBuf) -> Result<Self, anyhow::Error> {
@@ -52,11 +59,7 @@ impl Plugin for AppsPlugin {
   fn action(&self, input: Value) -> Result<OkAction, anyhow::Error> {
     let data: AppLaunch = serde_json::from_value(input)?;
     open::that(data.path.clone())
-      .map(|_| OkAction {
-        value: Value::Null,
-        close_win: true,
-        copy: false,
-      })
+      .map(|_| OkAction { close_win: true })
       .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", data.label, err))
   }
 
@@ -68,8 +71,8 @@ impl Plugin for AppsPlugin {
 impl From<AppLaunch> for FuzzyMatchItem {
   fn from(app: AppLaunch) -> FuzzyMatchItem {
     FuzzyMatchItem {
-      value: serde_json::to_value(&app).unwrap(),
       against: Arc::new(app.label.clone()),
+      value: Box::new(app),
       source: PLUGIN_NAME.to_string(),
     }
   }

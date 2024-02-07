@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
 use crate::{config::Config, plugin_manager::PluginManager};
-use arboard::Clipboard;
-use lyra_plugin::{FuzzyMatchItem, OkAction, PluginName};
+use lyra_plugin::{FuzzyMatchItem, PluginValue};
 use nucleo_matcher::{
   pattern::{CaseMatching, Pattern},
   Config as NucleoConfig, Matcher,
 };
 use parking_lot::RwLock;
-use serde_json::Value;
 
 pub struct Launcher {
   pub config: Arc<Config>,
@@ -42,9 +40,9 @@ impl Launcher {
           .flat_map(|pl| pl.options(search)),
         &mut *self.matcher.write(),
       )
-      .iter()
+      .into_iter()
       .take(self.config.get().result_count)
-      .map(|(v, _)| v.to_owned())
+      .map(|(v, _)| v)
       .chain(
         self
           .plugins
@@ -54,46 +52,12 @@ impl Launcher {
       )
       .collect()
   }
-
-  pub fn launch(&self, plugin: PluginName, selected: Value) -> Result<OkAction, anyhow::Error> {
-    self.plugins.get(&plugin).and_then(|pl| pl.action(selected))
-  }
 }
 
-pub fn search(launcher: &Launcher, search: &String) -> Vec<(PluginName, Value)> {
+pub fn search(launcher: &Launcher, search: &String) -> Vec<Box<dyn PluginValue>> {
   launcher
     .get_options(search)
-    .iter()
-    .map(|sk| (sk.source.clone(), sk.value.clone()))
+    .into_iter()
+    .map(|sk| sk.value)
     .collect()
-}
-
-pub fn submit(
-  clipboard: &mut Clipboard,
-  launcher: &Launcher,
-  for_plugin: PluginName,
-  selected: Value,
-  close_app: impl FnOnce(),
-) -> Result<Value, anyhow::Error> {
-  match launcher.launch(for_plugin, selected) {
-    Ok(OkAction {
-      value,
-      close_win: true,
-      copy: true,
-    }) => {
-      clipboard.set_text(value.to_string().trim_matches('"'))?;
-      close_app();
-      Ok(value)
-    }
-    Ok(OkAction {
-      value,
-      close_win: true,
-      ..
-    }) => {
-      close_app();
-      Ok(value)
-    }
-    Ok(OkAction { value, .. }) => Ok(value),
-    Err(err) => Err(err),
-  }
 }

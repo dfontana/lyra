@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+lyra-common = { path = "../lyra-common" }
 lyra-plugin = { path = "../lyra-plugin" }
 anyhow = {workspace=true}
+egui = { workspace = true }
 open = {workspace=true}
 parking_lot = {workspace=true}
 serde = {workspace=true}

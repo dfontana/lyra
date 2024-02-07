@@ -30,3 +30,19 @@ pub async fn image_data_url(url: String) -> Result<String, String> {
     "Could not convert image to data-url".into()
   })
 }
+
+// TODO: Eventually do away with this as we'll want to just natively
+// integrate, but config is currently all data url based. Ideally just use
+// PNG since they seem to render cleaner
+pub fn parse_image_data(s: &str) -> Option<(String, String)> {
+  let prefixes = vec![
+    ("image/svg+xml", "svg"),
+    ("image/png", "png"),
+    ("image/vnd.microsoft.icon", "ico"),
+    ("image/jpeg", "jpg"),
+  ];
+  prefixes.iter().find_map(|(pf, ext)| {
+    s.strip_prefix(&format!("data:{};base64,", pf))
+      .map(|s| (s.to_string(), ext.to_string()))
+  })
+}

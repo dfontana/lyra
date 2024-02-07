@@ -2,12 +2,27 @@ mod config;
 
 pub use config::*;
 
+use egui::Ui;
 use serde_json::Value;
 use std::{collections::HashMap, fmt, sync::Arc};
 
-#[derive(Clone)]
+#[derive(Default)]
+pub struct AppState {
+  pub input: String,
+  pub options: Vec<Box<dyn PluginValue>>,
+  pub selected: usize,
+}
+
+impl AppState {
+  pub fn selected(&self) -> Option<Box<dyn PluginValue>> {
+    // TODO fixup
+    // self.options.get(self.selected)
+    todo!()
+  }
+}
+
 pub struct FuzzyMatchItem {
-  pub value: Value,
+  pub value: Box<dyn PluginValue>,
   pub against: Arc<dyn AsRef<str>>,
   pub source: PluginName,
 }
@@ -25,10 +40,70 @@ impl fmt::Debug for FuzzyMatchItem {
 }
 
 pub struct OkAction {
-  pub value: Value,
   pub close_win: bool,
-  pub copy: bool,
 }
+
+pub trait Launchable {
+  /// Execute this plugin against the given input (specific to this plugin).
+  /// Plugins can choose to close the window after they are done executing by setting the boolean
+  /// in the returned OkAction.
+  fn try_launch(&self, state: &AppState) -> Result<OkAction, anyhow::Error> {
+    // let value = match pv.as_str() {
+    //           "calc" => opt.get("Ok").unwrap().clone(),
+    //           "apps" => opt.clone(),
+    //           "webq" if self.state.templating.is_complete() || is_bookmark(opt) => {
+    //             let (args, _) = extract_args(opt, &self.state.input).unwrap();
+    //             opt
+    //               .as_object()
+    //               .map(|m| {
+    //                 let mut m = m.clone();
+    //                 m.insert(
+    //                   "args".into(),
+    //                   Value::Array(args.iter().map(|v| Value::String(v.to_string())).collect()),
+    //                 );
+    //                 Value::Object(m)
+    //               })
+    //               .unwrap()
+    //           }
+    //           "webq" => {
+    //             // TODO: Would be nice to enter templating mode on the selected
+    //             //       item, which will require updating the input to be the prefix
+    //             //       + a space & then updating template state
+    //             return;
+    //           }
+    //           _ => return,
+    //         };
+
+    // // TODO: Move this into the calc plugin, not needed here
+    // self.clipboard.set_text(value.to_string().trim_matches('"'));
+    todo!()
+  }
+}
+
+pub trait SearchBlocker {
+  /// Determines if further searching should be prevented, because this
+  /// plugin is waiting for further input instead
+  fn blocks_search(&self, _state: &AppState) -> bool {
+    false
+  }
+}
+
+pub trait Renderable {
+  // TODO: Use to render each plugin
+  fn render(&self, ui: &mut Ui, state: &AppState) {
+    // TODO: Move into each plugin
+    // match plugin_name.as_str() {
+    //             "calc" => mk_calc(ui, opt, &self.state.input),
+    //             "apps" => mk_app_res(ui, opt),
+    //             "webq" => mk_app_res(ui, opt), // This can be rendered better to show populated template
+    //             unk => {
+    //               error!("Unknown plugin: {}", unk);
+    //             }
+    //           };
+  }
+}
+
+pub trait PluginValue: Launchable + SearchBlocker + Renderable {}
 
 pub type PluginName = String;
 pub trait Plugin: Send + Sync {
@@ -56,14 +131,15 @@ pub trait Plugin: Send + Sync {
     None
   }
 
-  /// Execute this plugin against the given input (specific to this plugin). This plugin
-  /// will have to deserialize the value to determine what to do with it. If there's an issue
-  /// executing this action a serializable error can be returned (like for Calc this will be)
-  /// an object the UI can parse, but for others it might be nothing or just a String.
-  ///
-  /// Plugins can choose to close the window after they are done executing by setting the boolean
-  /// in the returned OkAction.
+  // TODO: Replaced with the Launchable trait -- delete this
+
   fn action(&self, input: Value) -> Result<OkAction, anyhow::Error>;
+
+  /// If this plugin wants to manipulate the state of the app, this is a hook
+  /// to do so whenever the state changes.
+  fn derive_state(&self, state: &AppState) -> Option<AppState> {
+    None
+  }
 
   /// This is the options a plugin wants to contribute based on the given search string. Note this won't
   /// have anything like a prefix on the value, so bear that in mind - it's safe to interpret as is.

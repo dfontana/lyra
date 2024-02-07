@@ -4,7 +4,9 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use calc::Context;
 use config::CalcConf;
-use lyra_plugin::{Config, FuzzyMatchItem, OkAction, Plugin};
+use lyra_plugin::{
+  Config, FuzzyMatchItem, Launchable, OkAction, Plugin, PluginValue, Renderable, SearchBlocker,
+};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -14,6 +16,17 @@ pub struct CalcError {
   start: usize,
   end: usize,
 }
+
+pub enum Evaluated {
+  Ok(String),
+  Err(CalcError),
+}
+
+// TODO Fill these in
+impl PluginValue for Evaluated {}
+impl Renderable for Evaluated {}
+impl SearchBlocker for Evaluated {}
+impl Launchable for Evaluated {}
 
 pub const PLUGIN_NAME: &'static str = "calc";
 
@@ -27,7 +40,7 @@ impl CalcPlugin {
     Ok(CalcPlugin { cfg: CalcConf(cfg) })
   }
 
-  fn eval(&self, search_input: &str) -> Result<Value, Value> {
+  fn eval(&self, search_input: &str) -> Evaluated {
     let mut context = Context::<f64>::default();
     context
       .evaluate_annotated(&search_input.strip_prefix(&self.prefix().unwrap()).unwrap())
@@ -72,7 +85,9 @@ impl CalcPlugin {
         },
       })
       .map(|v| serde_json::to_value(v).unwrap())
-      .map_err(|e| serde_json::to_value(e).unwrap())
+      .map_err(|e| serde_json::to_value(e).unwrap());
+    // TODO refactor return of this method
+    todo!()
   }
 }
 
@@ -90,16 +105,13 @@ impl Plugin for CalcPlugin {
   }
 
   fn action(&self, input: Value) -> Result<OkAction, anyhow::Error> {
-    Ok(OkAction {
-      value: input,
-      close_win: true,
-      copy: true,
-    })
+    // TODO: Copy value onto clipboard
+    Ok(OkAction { close_win: true })
   }
 
   fn options(&self, search: &str) -> Vec<FuzzyMatchItem> {
     vec![FuzzyMatchItem {
-      value: serde_json::to_value(self.eval(search)).unwrap(),
+      value: Box::new(self.eval(search)),
       against: Arc::new(search.to_owned()),
       source: PLUGIN_NAME.to_string(),
     }]

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
-members = [
+members = [ 
+  "lyra-common",
   "lyra-plugin",
   "lyra-plugin-apps",
   "lyra-plugin-calc",

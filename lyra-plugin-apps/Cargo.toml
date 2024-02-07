@@ -9,6 +9,7 @@ edition = "2021"
 lyra-plugin = { path = "../lyra-plugin" }
 anyhow = {workspace=true}
 base64 = {workspace = true}
+egui = { workspace = true }
 glob = "0.3.1"
 icns = "0.3.1"
 open = {workspace=true}
