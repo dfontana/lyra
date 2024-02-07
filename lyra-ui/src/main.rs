@@ -130,6 +130,8 @@ fn extract_args<'a>(v: &'a Value, input: &'a str) -> Option<(Vec<&'a str>, usize
   })
 }
 
+// TODO: This TemplatingState concept is best moved to the WebQ plugin where the templating
+// code lives; and exposed as some pure functions
 #[derive(Debug, PartialEq, Eq)]
 enum TemplatingState {
   NotStarted,
@@ -358,7 +360,19 @@ impl eframe::App for LyraUi {
           // TODO: Extract all styles & sizes/paddings to object on app so they can be set from
           //       once place as "constants"
           // TODO: Eventually can defer UI behavior to each plugin tbh
-          // TODO: Find a better interface than Value.
+          // TODO: Find a better interface than Value; this might be a good next step.
+          //   - You could use the `Any` trait and store the plugin structs + downcast https://ysantos.com/blog/downcast-rust
+          //     - Either downcasting at each usage (ew)
+          //     - Or at handing back to the pluginManager (this is very possible; the data is disjoint and you only interact with it by itself).
+          //       The tricky part is how templating manipulates input/selected/options. You need a hook for that for any plugin to mess with (eg)
+          //       when any app state is updated, check with each plugin if it has state to update && store that on the LyraUi/replace it.
+          //   - You could implement each behavior as a trait and create a "super trait" representing something implementing each of them
+          //     then create a blanket impl on each trait w/ a no-op/default behavior. Then each plugin can opt into behavior by implementing the
+          //     trait and at each of these needed callsites invoke the beahvior on the option.
+          //     - This may have edge cases like when one case needs more data than another
+          //     - Nor does it fully grasp the templating issue.
+          //   - Perhaps its best to ditch the enabled/disabled plugins concept and just have them all enabled always; then define their core
+          //     data structures in the central plugin so it can be made to an enum
           for (idx, (plugin_name, opt)) in self.options.iter().enumerate() {
             let mut fm = egui::Frame::none().inner_margin(4.0).rounding(2.0);
             if idx == self.selected {
