@@ -33,7 +33,7 @@ impl PluginValue for AppLaunch {}
 impl Renderable for AppLaunch {
   fn render(&self, ui: &mut egui::Ui, _state: &AppState) {
     let icon = lyra_convert::parse_image_data(&self.icon)
-      .ok_or(anyhow!("TODO: Non-PNG support"))
+      .ok_or(anyhow!("Cannot render this image format"))
       .and_then(|(s, ext)| lyra_convert::decode_bytes(&s).map(|b| (b, ext)));
 
     ui.horizontal(|ui| {

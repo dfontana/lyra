@@ -55,7 +55,7 @@ impl Renderable for Searcher {
     // TODO: We can render something better that shows the state of the
     //       hydrated template
     let icon = convert::parse_image_data(&self.icon)
-      .ok_or(anyhow!("TODO: Non-PNG support"))
+      .ok_or(anyhow!("Cannot render image format"))
       .and_then(|(s, ext)| convert::decode_bytes(&s).map(|b| (b, ext)));
 
     ui.horizontal(|ui| {
