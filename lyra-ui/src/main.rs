@@ -1,18 +1,15 @@
 mod config;
 mod launcher;
 mod logs;
-mod plugin_manager;
 
 use anyhow::anyhow;
-use arboard::Clipboard;
 use egui::{
-  Align, Color32, Event, EventFilter, FontId, IconData, Image, InputState, Key, Modifiers,
-  RichText, TextBuffer, TextEdit, Ui, ViewportBuilder,
+  Align, Color32, Event, EventFilter, FontId, IconData, InputState, Key, Modifiers, TextBuffer,
+  TextEdit, ViewportBuilder,
 };
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
-use lyra_plugin::{AppState, OkAction};
+use lyra_plugin::{AppState, OkAction, PluginManager};
 use once_cell::sync::Lazy;
-use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
@@ -26,7 +23,6 @@ use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
 
 use config::{Config, Placement, Styles};
 use launcher::Launcher;
-use plugin_manager::PluginManager;
 
 fn main() -> anyhow::Result<()> {
   let bld = setup_app()?;
@@ -84,12 +80,12 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   //       Alternatively need to display a message when no plugins are active, but better
   //       to have defaults.
   let config = Config::get_or_init_config().map(Arc::new)?;
-  let plugins = PluginManager::init(config.clone())?;
+  let plugins = PluginManager::init(&config.get().plugins, &config.conf_dir, &config.cache_dir)?;
+
   Ok(LyraUiBuilder {
     config: config.clone(),
     plugins: plugins.clone(),
     launcher: Launcher::new(config, plugins),
-    clipboard: Clipboard::new()?,
   })
 }
 
@@ -97,7 +93,6 @@ struct LyraUi {
   config: Arc<Config>,
   plugins: PluginManager,
   launcher: Launcher,
-  clipboard: Clipboard,
   state: AppState,
 }
 
@@ -105,7 +100,6 @@ struct LyraUiBuilder {
   pub config: Arc<Config>,
   pub plugins: PluginManager,
   pub launcher: Launcher,
-  pub clipboard: Clipboard,
 }
 impl LyraUiBuilder {
   fn build(self) -> LyraUi {
@@ -113,37 +107,14 @@ impl LyraUiBuilder {
       config: self.config,
       plugins: self.plugins,
       launcher: self.launcher,
-      clipboard: self.clipboard,
       state: AppState::default(),
     }
   }
 }
 
-trait Launchable {}
-
 impl LyraUi {
   fn reset_state(&mut self) {
     self.state = AppState::default();
-  }
-  // TODO: Trait for Into<FuzzyMatchItem>
-
-  fn derive_state(state: &AppState) -> Option<AppState> {
-    // TODO: Move this commented code into the webq impl
-    // // TODO: This is buggy ->
-    // //   - The selected option might not be the one that's actually matching
-    // //     the template prefix typed into input
-    // //   - Once templating starts we need to be filtering to only exact matches
-    // //     and not "starts_with" matches
-    // //   - ^^ Notice I said matches and not singular match. Fix that too.
-    // if self.templating.compute(
-    //   self.state.options.get(self.state.selected),
-    //   &self.state.input,
-    // ) {
-    //   self.state.selected = 0;
-    //   self.state.options = vec![self.state.options[self.state.selected].clone()];
-    // }
-    // println!("{:?} -> {:?}", self.state.templating, self.state.input);
-    None
   }
 
   fn check_plugins_for_state_updates(&mut self) {
@@ -190,8 +161,9 @@ impl eframe::App for LyraUi {
 
     if ctx.input(|i| i.key_released(Key::Enter)) {
       if let Some(opt) = self.state.selected() {
-        match opt.try_launch(&self.state) {
+        match self.plugins.try_launch(opt) {
           Ok(OkAction { close_win: true }) => {
+            // TODO: This should reset the size of the UI, so when it re-appears it's not 2+ lines tall
             close_window(ctx, false);
             self.reset_state();
           }
@@ -238,8 +210,6 @@ impl eframe::App for LyraUi {
 
           // TODO: Extract all styles & sizes/paddings to object on app so they can be set from
           //       once place as "constants"
-          // TODO: Eventually can defer UI behavior to each plugin tbh
-          // TODO: Find a better interface than Value; this might be a good next step.
           for (idx, pv) in self.state.options.iter().enumerate() {
             let mut fm = egui::Frame::none().inner_margin(4.0).rounding(2.0);
             if idx == self.state.selected {
@@ -272,96 +242,6 @@ fn is_nav_down(i: &InputState) -> bool {
 fn is_nav_up(i: &InputState) -> bool {
   i.key_released(Key::ArrowUp)
     || (i.modifiers.matches_exact(Modifiers::SHIFT) && i.key_released(Key::Tab))
-}
-
-fn mk_calc(ui: &mut Ui, opt: &Value, inp: &str) {
-  ui.horizontal(|ui| {
-    let ok_result = opt
-      .as_object()
-      .and_then(|m| m.get("Ok"))
-      .map(|v| v.to_string())
-      .map(|s| s.trim_matches('"').to_owned());
-
-    if let Some(v) = ok_result {
-      ui.label(RichText::new(&v));
-      return;
-    }
-
-    let err_result = opt
-      .as_object()
-      .and_then(|m| m.get("Err"))
-      .and_then(|m| m.as_object());
-    let err_msg = err_result
-      .and_then(|m| m.get("message"))
-      .map(|v| v.to_string())
-      .map(|s| s.trim_matches('"').to_owned());
-    let err_start = err_result
-      .and_then(|m| m.get("start"))
-      .and_then(|s| s.as_u64())
-      .map(|v| v as usize);
-    let err_end = err_result
-      .and_then(|m| m.get("end"))
-      .and_then(|s| s.as_u64())
-      .map(|v| v as usize);
-
-    match (err_start, err_end, err_msg) {
-      (Some(s), Some(e), _) if s != 0 && e != 0 => {
-        ui.label(RichText::new(&inp[1..s]));
-        ui.label(RichText::new(&inp[s..e + 1]).color(Color32::RED));
-        ui.label(RichText::new(&inp[e + 1..]));
-      }
-      (_, _, Some(msg)) => {
-        ui.label(RichText::new(&msg));
-      }
-      _ => return,
-    }
-  });
-}
-
-fn mk_app_res(ui: &mut Ui, opt: &Value) {
-  let obj = opt.as_object();
-
-  let label = obj
-    .filter(|m| m.contains_key("label"))
-    .and_then(|m| m.get("label"))
-    .map(|l| l.to_string())
-    .map(|s| s.trim_matches('"').to_owned())
-    .unwrap_or("Unlabelled Result".into());
-
-  let icon = obj
-    .filter(|m| m.contains_key("icon"))
-    .and_then(|m| m.get("icon"))
-    .and_then(|v| v.as_str())
-    .and_then(parse_image_data)
-    .ok_or(anyhow!("TODO: Non-PNG support"))
-    .and_then(|(s, ext)| convert::decode_bytes(&s).map(|b| (b, ext)));
-
-  ui.horizontal(|ui| {
-    if let Ok((img, ext)) = icon {
-      ui.add(
-        Image::from_bytes(format!("bytes://{}.{}", label.to_string(), ext), img)
-          .maintain_aspect_ratio(true)
-          .shrink_to_fit(),
-      );
-    }
-    ui.label(RichText::new(&label));
-  });
-}
-
-// TODO: Eventually do away with this as we'll want to just natively
-// integrate, but config is currently all data url based. Ideally just use
-// PNG since they seem to render cleaner
-fn parse_image_data(s: &str) -> Option<(String, String)> {
-  let prefixes = vec![
-    ("image/svg+xml", "svg"),
-    ("image/png", "png"),
-    ("image/vnd.microsoft.icon", "ico"),
-    ("image/jpeg", "jpg"),
-  ];
-  prefixes.iter().find_map(|(pf, ext)| {
-    s.strip_prefix(&format!("data:{};base64,", pf))
-      .map(|s| (s.to_string(), ext.to_string()))
-  })
 }
 
 fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer) -> TextEdit {

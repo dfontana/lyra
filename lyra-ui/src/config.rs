@@ -1,6 +1,5 @@
-use crate::plugin_manager::PluginManager;
 use anyhow::Context;
-use lyra_plugin::PluginName;
+use lyra_plugin::{PluginManager, PluginName};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

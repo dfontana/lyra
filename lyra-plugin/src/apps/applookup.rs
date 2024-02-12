@@ -4,7 +4,7 @@ use std::{
   sync::Arc,
 };
 
-use crate::{
+use super::{
   config::{AppCache, AppConf},
   AppLaunch,
 };

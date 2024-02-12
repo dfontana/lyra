@@ -5,13 +5,14 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use lyra_plugin::Config;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::info;
 
-use crate::convert;
+use crate::Config;
+
+use super::convert;
 
 pub struct AppConf(pub Config<InnerConfig>);
 

@@ -1,6 +1,6 @@
-use crate::template::Template;
+use super::template::Template;
+use super::Config;
 use anyhow::{anyhow, Context};
-use lyra_plugin::Config;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;

@@ -1,54 +1,61 @@
 use std::{
   collections::{hash_map::Values, HashMap},
+  path::PathBuf,
   sync::Arc,
 };
 
+use crate::{
+  apps::{self, AppsPlugin},
+  calc::{self, CalcPlugin},
+  webq::{self, WebqPlugin},
+  OkAction, PluginName, PluginV, Plugins,
+};
 use anyhow::anyhow;
-use lyra_plugin::{Plugin, PluginName};
-use lyra_plugin_apps::AppsPlugin;
-use lyra_plugin_calc::CalcPlugin;
-use lyra_plugin_webq::WebqPlugin;
+use arboard::Clipboard;
 use serde_json::Value;
 
-use crate::config::Config;
-
 #[derive(Clone)]
-pub struct PluginManager(Arc<HashMap<PluginName, Box<dyn Plugin>>>);
+pub struct PluginManager(Arc<HashMap<PluginName, Plugins>>);
 
 impl PluginManager {
-  pub fn init(cfg: Arc<Config>) -> Result<Self, anyhow::Error> {
-    let plugs: Result<HashMap<_, Box<dyn Plugin>>, _> = cfg
-      .get()
-      .plugins
+  pub fn init(
+    plugins: &Vec<String>,
+    conf_dir: &PathBuf,
+    cache_dir: &PathBuf,
+  ) -> Result<Self, anyhow::Error> {
+    let plugs: Result<HashMap<_, _>, _> = plugins
       .iter()
       .map(|pn| {
-        let pl = match pn.as_ref() {
-          lyra_plugin_calc::PLUGIN_NAME => {
-            Box::new(CalcPlugin::init(&cfg.conf_dir, &cfg.cache_dir)?) as Box<dyn Plugin>
+        let pl = match pn.as_str() {
+          calc::PLUGIN_NAME => {
+            Plugins::Calc(CalcPlugin::init(conf_dir, cache_dir, Clipboard::new()?)?)
           }
-          lyra_plugin_webq::PLUGIN_NAME => {
-            Box::new(WebqPlugin::init(&cfg.conf_dir, &cfg.cache_dir)?) as Box<dyn Plugin>
-          }
-          lyra_plugin_apps::PLUGIN_NAME => {
-            Box::new(AppsPlugin::init(&cfg.conf_dir, &cfg.cache_dir)?) as Box<dyn Plugin>
-          }
+          webq::PLUGIN_NAME => Plugins::Webq(WebqPlugin::init(conf_dir, cache_dir)?),
+          apps::PLUGIN_NAME => Plugins::Apps(AppsPlugin::init(conf_dir, cache_dir)?),
           _ => return Err(anyhow!("{} is an unknown plugin", pn)),
         };
-
-        Ok((pn.clone(), pl))
+        Ok((pl.id(), pl))
       })
       .collect();
     Ok(PluginManager(Arc::new(plugs?)))
   }
 
-  pub fn get(&self, plug: &PluginName) -> Result<&Box<dyn Plugin>, anyhow::Error> {
+  pub fn try_launch(&mut self, opt: &PluginV) -> Result<OkAction, anyhow::Error> {
+    self
+      .0
+      .get(&opt.id())
+      .ok_or_else(|| anyhow!("Unknown plugin given"))
+      .and_then(|pls| pls.action(opt))
+  }
+
+  pub fn get(&self, plug: &PluginName) -> Result<&Plugins, anyhow::Error> {
     self
       .0
       .get(plug)
       .ok_or_else(|| anyhow!("Plugin {} not found", plug))
   }
 
-  pub fn iter(&self) -> Values<'_, String, Box<dyn Plugin>> {
+  pub fn iter(&self) -> Values<'_, String, Plugins> {
     self.0.values()
   }
 
@@ -63,7 +70,7 @@ impl PluginManager {
 
   /// Return the plugins whose prefix are found within the search string, or if none
   /// are found, then return everything
-  pub fn filter_to(&self, search: &str) -> Vec<&Box<dyn Plugin>> {
+  pub fn filter_to(&self, search: &str) -> Vec<&Plugins> {
     let plugs: Vec<_> = self
       .0
       .values()
@@ -82,7 +89,7 @@ impl PluginManager {
   }
 
   /// Return the plugins that has something static they want to contribute
-  pub fn always_present(&self, search: &str) -> Vec<&Box<dyn Plugin>> {
+  pub fn always_present(&self, search: &str) -> Vec<&Plugins> {
     // Note: optimization here would be to pass a state between filter_to and here
     //       so we don't need to re-check if any prefixes matched
     if self.0.values().any(|pl| match pl.prefix() {

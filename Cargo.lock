@@ -2615,60 +2615,18 @@ name = "lyra-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "egui",
- "nucleo-matcher",
- "parking_lot",
- "serde",
- "serde_json",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "lyra-plugin-apps"
-version = "0.1.0"
-dependencies = [
- "anyhow",
+ "arboard",
  "base64",
+ "calc",
  "egui",
  "glob",
  "icns",
- "lyra-plugin",
+ "lalrpop-util",
+ "lyra-common",
+ "nucleo-matcher",
  "open",
  "parking_lot",
  "plist",
- "serde",
- "serde_json",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "lyra-plugin-calc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "calc",
- "egui",
- "lalrpop-util",
- "lyra-plugin",
- "parking_lot",
- "serde",
- "serde_json",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "lyra-plugin-webq"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "egui",
- "lyra-common",
- "lyra-plugin",
- "open",
- "parking_lot",
  "serde",
  "serde_json",
  "toml",
@@ -2680,7 +2638,6 @@ name = "lyra-ui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arboard",
  "base64",
  "chrono",
  "derive_builder",
@@ -2692,9 +2649,6 @@ dependencies = [
  "image",
  "itertools 0.12.1",
  "lyra-plugin",
- "lyra-plugin-apps",
- "lyra-plugin-calc",
- "lyra-plugin-webq",
  "nucleo-matcher",
  "once_cell",
  "parking_lot",

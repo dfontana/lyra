@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::{config::Config, plugin_manager::PluginManager};
-use lyra_plugin::{FuzzyMatchItem, PluginValue};
+use crate::config::Config;
+use lyra_plugin::{FuzzyMatchItem, PluginManager, PluginV};
 use nucleo_matcher::{
   pattern::{CaseMatching, Pattern},
   Config as NucleoConfig, Matcher,
@@ -54,7 +54,7 @@ impl Launcher {
   }
 }
 
-pub fn search(launcher: &Launcher, search: &String) -> Vec<Box<dyn PluginValue>> {
+pub fn search(launcher: &Launcher, search: &String) -> Vec<PluginV> {
   launcher
     .get_options(search)
     .into_iter()

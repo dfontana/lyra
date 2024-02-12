@@ -1,17 +1,20 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
-use anyhow::{anyhow, Context};
-use applookup::AppLookup;
-use config::{AppCache, AppConf};
-use lyra_plugin::{
-  Config, FuzzyMatchItem, Launchable, OkAction, Plugin, PluginValue, Renderable, SearchBlocker,
-};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
 mod applookup;
 mod config;
 mod convert;
+
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
+
+use crate::{
+  AppState, Config, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable,
+  SearchBlocker,
+};
+use anyhow::{anyhow, Context};
+use applookup::AppLookup;
+use config::{AppCache, AppConf};
+use egui::{Image, RichText};
+use lyra_common::convert as lyra_convert;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub const PLUGIN_NAME: &'static str = "apps";
 
@@ -20,17 +23,32 @@ pub struct AppsPlugin {
   apps: AppLookup,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AppLaunch {
   pub label: String,
   pub icon: String,
   pub path: String,
 }
-// TODO Fill these in
 impl PluginValue for AppLaunch {}
-impl Renderable for AppLaunch {}
+impl Renderable for AppLaunch {
+  fn render(&self, ui: &mut egui::Ui, _state: &AppState) {
+    let icon = lyra_convert::parse_image_data(&self.icon)
+      .ok_or(anyhow!("TODO: Non-PNG support"))
+      .and_then(|(s, ext)| lyra_convert::decode_bytes(&s).map(|b| (b, ext)));
+
+    ui.horizontal(|ui| {
+      if let Ok((img, ext)) = icon {
+        ui.add(
+          Image::from_bytes(format!("bytes://{}.{}", self.label.to_string(), ext), img)
+            .maintain_aspect_ratio(true)
+            .shrink_to_fit(),
+        );
+      }
+      ui.label(RichText::new(&self.label));
+    });
+  }
+}
 impl SearchBlocker for AppLaunch {}
-impl Launchable for AppLaunch {}
 
 impl AppsPlugin {
   pub fn init(conf_dir: &PathBuf, cache_dir: &PathBuf) -> Result<Self, anyhow::Error> {
@@ -48,6 +66,8 @@ impl AppsPlugin {
 }
 
 impl Plugin for AppsPlugin {
+  type PV = AppLaunch;
+
   fn get_config(&self) -> Value {
     serde_json::to_value((*self.cfg.0.get()).clone()).unwrap()
   }
@@ -56,11 +76,10 @@ impl Plugin for AppsPlugin {
     self.cfg.update(updates)
   }
 
-  fn action(&self, input: Value) -> Result<OkAction, anyhow::Error> {
-    let data: AppLaunch = serde_json::from_value(input)?;
-    open::that(data.path.clone())
+  fn action(&self, input: &AppLaunch) -> Result<OkAction, anyhow::Error> {
+    open::that(input.path.clone())
       .map(|_| OkAction { close_win: true })
-      .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", data.label, err))
+      .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", input.label, err))
   }
 
   fn options(&self, _: &str) -> Vec<FuzzyMatchItem> {
@@ -72,7 +91,7 @@ impl From<AppLaunch> for FuzzyMatchItem {
   fn from(app: AppLaunch) -> FuzzyMatchItem {
     FuzzyMatchItem {
       against: Arc::new(app.label.clone()),
-      value: Box::new(app),
+      value: PluginV::Apps(app),
       source: PLUGIN_NAME.to_string(),
     }
   }

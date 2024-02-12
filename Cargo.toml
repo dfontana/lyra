@@ -3,9 +3,6 @@ resolver = "2"
 members = [ 
   "lyra-common",
   "lyra-plugin",
-  "lyra-plugin-apps",
-  "lyra-plugin-calc",
-  "lyra-plugin-webq",
   "lyra-ui",
 ]
 
