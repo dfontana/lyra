@@ -1,11 +1,11 @@
 <h1 align="center">
   <br>
   Lyra
-  <img src="https://raw.githubusercontent.com/dfontana/lyra/master/src-icons/app-icon-alt.png" alt="Lyra" width="25">
+  <img src="https://raw.githubusercontent.com/dfontana/lyra/master/lyra-ui/icons/app-icon-alt.png" alt="Lyra" width="25">
   <br>
 </h1>
 
-<h4 align="center">A cross-platform launcher built with <a href="https://tauri.app/" target="_blank">Tauri</a>.</h4>
+<h4 align="center">A cross-platform launcher built with <a href="https://github.com/emilk/egui/" target="_blank">egui</a>.</h4>
 
 <p align="center">
   <a href="#status">Status</a> •
@@ -73,11 +73,5 @@ Nearly there! Final polishes on MacOs before we can start focusing back on Linux
 
 ### Quick Reference
 
-- `yarn install && yarn build` to init the repo
-- `cargo tauri dev` for dev server
-- `cargo tauri icon ../src-icon/app-icon.png` for icons (from the `src-tauri` dir)
-- `cargo tauri build` to package app
-  - Binary built: `src-tauri/target/release/[app name]`
-  - Installers built: `src-tauri/target/release/bundle/`
-- `yarn react-devtools` to debug
+- `cargo tauri icon ../src-icon/app-icon.png` for icons
 

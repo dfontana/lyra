@@ -1,13 +1,157 @@
+mod apps;
+mod calc;
 mod config;
+mod plugin_manager;
+mod webq;
 
+use anyhow::anyhow;
+use apps::{AppLaunch, AppsPlugin};
+use calc::{CalcPlugin, Evaluated};
 pub use config::*;
+pub use plugin_manager::*;
 
+use egui::Ui;
 use serde_json::Value;
 use std::{collections::HashMap, fmt, sync::Arc};
+use webq::{Searcher, WebqPlugin};
+
+pub enum Plugins {
+  Apps(AppsPlugin),
+  Calc(CalcPlugin),
+  Webq(WebqPlugin),
+}
 
 #[derive(Clone)]
+pub enum PluginV {
+  Apps(AppLaunch),
+  Calc(Evaluated),
+  Webq(Searcher),
+}
+
+impl Plugins {
+  pub fn id(&self) -> PluginName {
+    match self {
+      Plugins::Apps(_) => apps::PLUGIN_NAME.to_owned(),
+      Plugins::Calc(_) => calc::PLUGIN_NAME.to_owned(),
+      Plugins::Webq(_) => webq::PLUGIN_NAME.to_owned(),
+    }
+  }
+
+  pub fn get_config(&self) -> Value {
+    match self {
+      Plugins::Apps(pi) => pi.get_config(),
+      Plugins::Calc(pi) => pi.get_config(),
+      Plugins::Webq(pi) => pi.get_config(),
+    }
+  }
+
+  pub fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
+    match self {
+      Plugins::Apps(pi) => pi.update_config(updates),
+      Plugins::Calc(pi) => pi.update_config(updates),
+      Plugins::Webq(pi) => pi.update_config(updates),
+    }
+  }
+
+  pub fn validate_value(&self, input_type: &str, input_value: &str) -> Result<(), anyhow::Error> {
+    match self {
+      Plugins::Apps(pi) => pi.validate_value(input_type, input_value),
+      Plugins::Calc(pi) => pi.validate_value(input_type, input_value),
+      Plugins::Webq(pi) => pi.validate_value(input_type, input_value),
+    }
+  }
+
+  pub fn prefix(&self) -> Option<String> {
+    match self {
+      Plugins::Apps(pi) => pi.prefix(),
+      Plugins::Calc(pi) => pi.prefix(),
+      Plugins::Webq(pi) => pi.prefix(),
+    }
+  }
+
+  pub fn action(&self, input: &PluginV) -> Result<OkAction, anyhow::Error> {
+    match (self, input) {
+      (Plugins::Apps(pi), PluginV::Apps(v)) => pi.action(v),
+      (Plugins::Calc(pi), PluginV::Calc(v)) => pi.action(v),
+      (Plugins::Webq(pi), PluginV::Webq(v)) => pi.action(v),
+      _ => Err(anyhow!("Incompatible plugin and value given")),
+    }
+  }
+
+  pub fn derive_state(&self, state: &AppState) -> Option<AppState> {
+    match self {
+      Plugins::Apps(pi) => pi.derive_state(state),
+      Plugins::Calc(pi) => pi.derive_state(state),
+      Plugins::Webq(pi) => pi.derive_state(state),
+    }
+  }
+
+  pub fn options(&self, search: &str) -> Vec<FuzzyMatchItem> {
+    match self {
+      Plugins::Apps(pi) => pi.options(search),
+      Plugins::Calc(pi) => pi.options(search),
+      Plugins::Webq(pi) => pi.options(search),
+    }
+  }
+
+  pub fn has_static_items(&self) -> bool {
+    match self {
+      Plugins::Apps(pi) => pi.has_static_items(),
+      Plugins::Calc(pi) => pi.has_static_items(),
+      Plugins::Webq(pi) => pi.has_static_items(),
+    }
+  }
+
+  pub fn static_items(&self) -> Vec<FuzzyMatchItem> {
+    match self {
+      Plugins::Apps(pi) => pi.static_items(),
+      Plugins::Calc(pi) => pi.static_items(),
+      Plugins::Webq(pi) => pi.static_items(),
+    }
+  }
+}
+
+impl PluginV {
+  pub fn id(&self) -> PluginName {
+    match self {
+      PluginV::Apps(_) => apps::PLUGIN_NAME.to_owned(),
+      PluginV::Calc(_) => calc::PLUGIN_NAME.to_owned(),
+      PluginV::Webq(_) => webq::PLUGIN_NAME.to_owned(),
+    }
+  }
+
+  pub fn render(&self, ui: &mut Ui, state: &AppState) {
+    match self {
+      PluginV::Apps(v) => v.render(ui, state),
+      PluginV::Calc(v) => v.render(ui, state),
+      PluginV::Webq(v) => v.render(ui, state),
+    }
+  }
+
+  pub fn blocks_search(&self, state: &AppState) -> bool {
+    match self {
+      PluginV::Apps(v) => v.blocks_search(state),
+      PluginV::Calc(v) => v.blocks_search(state),
+      PluginV::Webq(v) => v.blocks_search(state),
+    }
+  }
+}
+
+#[derive(Clone, Default)]
+pub struct AppState {
+  pub input: String,
+  pub options: Vec<PluginV>,
+  pub selected: usize,
+}
+
+impl AppState {
+  pub fn selected(&self) -> Option<&PluginV> {
+    self.options.get(self.selected)
+  }
+}
+
 pub struct FuzzyMatchItem {
-  pub value: Value,
+  pub value: PluginV,
   pub against: Arc<dyn AsRef<str>>,
   pub source: PluginName,
 }
@@ -25,13 +169,31 @@ impl fmt::Debug for FuzzyMatchItem {
 }
 
 pub struct OkAction {
-  pub value: Value,
   pub close_win: bool,
-  pub copy: bool,
 }
+
+pub trait SearchBlocker {
+  /// Determines if further searching should be prevented, because this
+  /// plugin is waiting for further input instead
+  fn blocks_search(&self, _state: &AppState) -> bool {
+    false
+  }
+}
+
+pub trait Renderable {
+  /// Implement this to customize how your plugin renders it's data in the UI,
+  /// which will be positioned below the main search bar. This is ran for each
+  /// plugin result, so your data will be displayed alongside other plugin data.
+  /// The ui context is shared across plugins
+  fn render(&self, ui: &mut Ui, state: &AppState);
+}
+
+pub trait PluginValue: SearchBlocker + Renderable {}
 
 pub type PluginName = String;
 pub trait Plugin: Send + Sync {
+  type PV: PluginValue;
+
   /// Return the config object backing this plugin for UI hydration
   fn get_config(&self) -> Value;
 
@@ -56,14 +218,16 @@ pub trait Plugin: Send + Sync {
     None
   }
 
-  /// Execute this plugin against the given input (specific to this plugin). This plugin
-  /// will have to deserialize the value to determine what to do with it. If there's an issue
-  /// executing this action a serializable error can be returned (like for Calc this will be)
-  /// an object the UI can parse, but for others it might be nothing or just a String.
-  ///
+  /// Execute this plugin against the given input (specific to this plugin).
   /// Plugins can choose to close the window after they are done executing by setting the boolean
   /// in the returned OkAction.
-  fn action(&self, input: Value) -> Result<OkAction, Value>;
+  fn action(&self, input: &Self::PV) -> Result<OkAction, anyhow::Error>;
+
+  /// If this plugin wants to manipulate the state of the app, this is a hook
+  /// to do so whenever the state changes.
+  fn derive_state(&self, _state: &AppState) -> Option<AppState> {
+    None
+  }
 
   /// This is the options a plugin wants to contribute based on the given search string. Note this won't
   /// have anything like a prefix on the value, so bear that in mind - it's safe to interpret as is.
