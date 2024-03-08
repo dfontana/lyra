@@ -1,5 +1,5 @@
-use super::AppLaunch;
-use crate::config::{AppCache, AppsConfig};
+use super::{appcache::AppCache, AppLaunch};
+use crate::config::AppsConfig;
 use glob::glob;
 use std::{
   path::{Path, PathBuf},

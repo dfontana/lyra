@@ -1,4 +1,4 @@
-use crate::config::{SearchConfig, WebqConfig};
+use crate::config::{WebqConfig, WebqSearchConfig};
 use crate::plugin::{
   AppState, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable, SearchBlocker,
 };
@@ -163,8 +163,8 @@ impl Plugin for WebqPlugin {
   }
 }
 
-impl From<&SearchConfig> for Searcher {
-  fn from(sh: &SearchConfig) -> Searcher {
+impl From<&WebqSearchConfig> for Searcher {
+  fn from(sh: &WebqSearchConfig) -> Searcher {
     Searcher {
       label: sh.label.clone(),
       shortname: sh.shortname.clone(),
@@ -176,8 +176,8 @@ impl From<&SearchConfig> for Searcher {
   }
 }
 
-impl From<&SearchConfig> for FuzzyMatchItem {
-  fn from(sh: &SearchConfig) -> Self {
+impl From<&WebqSearchConfig> for FuzzyMatchItem {
+  fn from(sh: &WebqSearchConfig) -> Self {
     let searcher = Into::<Searcher>::into(sh);
     FuzzyMatchItem {
       against: Arc::new(searcher.shortname.clone()),
