@@ -10,7 +10,7 @@ use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotK
 use lyra_plugin::{AppState, PluginManager};
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use powerbar::{close_powerbar, LyraPowerbar};
+use powerbar::{LyraPowerbar, LyraPowerbarImpl};
 use settings::LyraSettings;
 use std::sync::Arc;
 use std::time::Duration;
@@ -30,10 +30,9 @@ const SETTINGS_MENU_ID: &str = "settings";
 
 fn main() -> anyhow::Result<()> {
   let bld = setup_app()?;
-  // TODO#37 move this into the config so folks can customize the trigger
   // Note this must be registered on the main thread or it doesn't work.
   let manager = GlobalHotKeyManager::new().unwrap();
-  let hotkey_toggle: HotKey = "CmdOrCtrl+Space".parse().unwrap();
+  let hotkey_toggle: HotKey = bld.config.get().hotkey.parse().unwrap();
   let toggle_hk_id = hotkey_toggle.id();
   let _ = manager.register(hotkey_toggle);
 
@@ -66,6 +65,7 @@ fn main() -> anyhow::Result<()> {
       let app = bld.build();
       init_event_listeners(
         cc.egui_ctx.clone(),
+        app.powerbar.clone(),
         app.settings.visible.clone(),
         toggle_hk_id,
       );
@@ -114,11 +114,12 @@ struct LyraUiBuilder {
 impl LyraUiBuilder {
   fn build(self) -> LyraUi {
     LyraUi {
-      powerbar: LyraPowerbar {
+      powerbar: LyraPowerbar::new(LyraPowerbarImpl {
         state: AppState::default(),
         plugins: self.plugins,
         launcher: self.launcher,
-      },
+        config: self.config.clone(),
+      }),
       settings: LyraSettings::default(),
     }
   }
@@ -136,7 +137,12 @@ impl eframe::App for LyraUi {
   }
 }
 
-fn init_event_listeners(ctx: egui::Context, settings_vis: Arc<RwLock<bool>>, toggle_hk_id: u32) {
+fn init_event_listeners(
+  ctx: egui::Context,
+  powerbar: LyraPowerbar,
+  settings_vis: Arc<RwLock<bool>>,
+  toggle_hk_id: u32,
+) {
   // Not events must be actioned on in their own thread and not update
   // otherwise they will only be seen/reacted to when the UI is focused
   let hk_receiver = GlobalHotKeyEvent::receiver();
@@ -146,7 +152,7 @@ fn init_event_listeners(ctx: egui::Context, settings_vis: Arc<RwLock<bool>>, tog
       match (event.id(), event.state()) {
         (id, HotKeyState::Released) if id == toggle_hk_id => {
           let vis = !ctx.input(|is| is.viewport().focused).unwrap_or(false);
-          close_powerbar(&ctx, vis);
+          powerbar.close(&ctx, vis);
         }
         _ => {}
       }
@@ -178,7 +184,9 @@ fn mk_system_tray() -> TrayIconBuilder {
 
 fn mk_viewport(cfg: Arc<Config>) -> ViewportBuilder {
   let Styles {
-    window_placement, ..
+    window_placement,
+    window_size: size,
+    ..
   } = cfg.get().styles;
 
   let mut bld = egui::ViewportBuilder::default()
@@ -190,9 +198,8 @@ fn mk_viewport(cfg: Arc<Config>) -> ViewportBuilder {
     .with_active(true)
     .with_visible(true)
     .with_icon(APP_ICON_ALT.clone())
-    // TODO: Pull from config
-    .with_min_inner_size([600.0, 32.0])
-    .with_inner_size([600.0, 32.0]);
+    .with_min_inner_size(size)
+    .with_inner_size(size);
   match window_placement {
     Placement::XY(x, y) => {
       bld = bld.with_position([x, y]);

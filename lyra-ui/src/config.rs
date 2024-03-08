@@ -1,4 +1,5 @@
 use anyhow::Context;
+use egui::{Color32, FontFamily, Margin, Rounding};
 use lyra_plugin::{PluginManager, PluginName};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,6 @@ use tracing::{error, info};
 pub struct Config {
   pub config: RwLock<InnerConfig>,
   file: PathBuf,
-  styles_inited: RwLock<bool>,
   pub cache_dir: PathBuf,
   pub conf_dir: PathBuf,
 }
@@ -21,18 +21,36 @@ pub struct InnerConfig {
   #[serde(default = "default_result_count")]
   pub result_count: usize,
   pub styles: Styles,
-  pub app_styles_path: PathBuf,
   pub plugins: Vec<PluginName>,
+  #[serde(default = "default_hotkey")]
+  pub hotkey: String,
+  app_styles_path: PathBuf,
 }
 
 fn default_result_count() -> usize {
   9
 }
 
+fn default_hotkey() -> String {
+  "CmdOrCtrl+Space".into()
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Styles {
   pub window_placement: Placement,
+  pub window_size: (f32, f32),
+  // TODO: Could make this better validated/integrated. Can it even be parsed?
+  pub window_rounding: Rounding,
+  pub window_padding: f32,
+  pub option_margin: Margin,
+  pub option_rounding: Rounding,
+  pub bg_color: Color32,
+  pub bg_color_selected: Color32,
+  pub text_color: Color32,
+  pub text_color_selected: Color32,
+  pub font_family: FontFamily,
+  pub font_size: f32,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -44,6 +62,17 @@ impl Default for Styles {
   fn default() -> Self {
     Self {
       window_placement: Placement::XY(100.0, 100.0),
+      window_size: (600.0, 32.0),
+      window_rounding: 5.0.into(),
+      window_padding: 4.0,
+      option_margin: 4.0.into(),
+      option_rounding: 2.0.into(),
+      bg_color: Color32::WHITE,
+      bg_color_selected: Color32::from_hex("#54e6ae").unwrap(),
+      text_color: Color32::DARK_GRAY,
+      text_color_selected: Color32::WHITE,
+      font_family: FontFamily::Monospace,
+      font_size: 16.0,
     }
   }
 }
@@ -101,7 +130,6 @@ impl Config {
         file: conf_file,
         conf_dir,
         cache_dir,
-        styles_inited: RwLock::new(false),
       }
     };
 
@@ -109,10 +137,6 @@ impl Config {
   }
 
   pub fn init_styles(&self, defaults_dir: PathBuf, force_write: bool) -> Result<(), anyhow::Error> {
-    if *self.styles_inited.read() {
-      return Ok(());
-    }
-
     // Initialize all the files that should exist
     info!("Checking for style files");
     let (conf_dir, _) = init_home()?;
@@ -139,13 +163,7 @@ impl Config {
           error!("Failed to init style file {:?}", e)
         };
       });
-    (*self.styles_inited.write()) = true;
     Ok(())
-  }
-
-  pub fn get_app_styles_path(&self) -> Result<PathBuf, anyhow::Error> {
-    let (conf_dir, _) = init_home()?;
-    Ok(conf_dir.join(&self.get().app_styles_path))
   }
 
   pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {
