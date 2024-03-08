@@ -27,17 +27,21 @@ pub struct InnerConfig {
   #[serde(default = "default_result_count")]
   pub result_count: usize,
   pub styles: Styles,
+  #[serde(default = "default_plugins")]
   pub plugins: Vec<PluginName>,
   #[serde(default = "default_hotkey")]
   pub hotkey: String,
   pub apps: AppsConfig,
   pub calc: CalcConfig,
   pub webq: WebqConfig,
-  app_styles_path: PathBuf,
 }
 
 fn default_result_count() -> usize {
   9
+}
+
+fn default_plugins() -> Vec<PluginName> {
+  vec!["apps".into(), "calc".into(), "webq".into()]
 }
 
 fn default_hotkey() -> String {
@@ -252,36 +256,6 @@ impl Config {
     };
 
     Ok(config)
-  }
-
-  pub fn init_styles(&self, defaults_dir: PathBuf, force_write: bool) -> Result<(), anyhow::Error> {
-    // Initialize all the files that should exist
-    info!("Checking for style files");
-    let (conf_dir, _) = init_home()?;
-    let styles_dir = conf_dir.join(&self.get().app_styles_path);
-    fs::read_dir(defaults_dir.join("resources"))?
-      .filter_map(Result::ok)
-      .filter_map(|file| {
-        file
-          .file_name()
-          .as_os_str()
-          .to_string_lossy()
-          .strip_prefix("default_")
-          .map(|name| (file.path(), name.to_string()))
-      })
-      .map(|(file, file_name)| (file, styles_dir.join(file_name)))
-      .filter(|(_, path)| force_write || !path.exists())
-      .for_each(|(default_file_path, config_style_path)| {
-        info!(
-          "Initializing style file {} @ {}",
-          default_file_path.display(),
-          config_style_path.display()
-        );
-        if let Err(e) = std::fs::copy(default_file_path, config_style_path) {
-          error!("Failed to init style file {:?}", e)
-        };
-      });
-    Ok(())
   }
 
   pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {

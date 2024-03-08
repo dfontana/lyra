@@ -92,11 +92,6 @@ fn main() -> anyhow::Result<()> {
 
 fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   logs::init_logs()?;
-  // TODO: Now that we're under one app, can we just put all the plugin
-  //       configs writing to dedicated tables in the TOML?
-  // TODO: The default config needs more things setup (like plugins, & prefixes in calc)
-  //       Alternatively need to display a message when no plugins are active, but better
-  //       to have defaults.
   let config = Config::get_or_init_config().map(Arc::new)?;
   let plugins = PluginManager::init(&config)?;
 
@@ -104,7 +99,7 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
     config: config.clone(),
     plugins: plugins.clone(),
     // TODO: Don't really need a launcher when I have the plugins. Perhaps remove?
-    // TODO: And maybe ditch the plugin structure/fold it into main src
+    // TODO: And maybe replace the PluginManager with just an enum
     launcher: Launcher::new(config, plugins),
   })
 }
