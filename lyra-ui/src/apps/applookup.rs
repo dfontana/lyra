@@ -1,16 +1,13 @@
+use super::AppLaunch;
+use crate::config::{AppCache, AppsConfig};
 use glob::glob;
 use std::{
   path::{Path, PathBuf},
   sync::Arc,
 };
 
-use super::{
-  config::{AppCache, AppConf},
-  AppLaunch,
-};
-
 pub struct AppLookup {
-  pub config: Arc<AppConf>,
+  pub config: AppsConfig,
   pub cache: Arc<AppCache>,
 }
 
@@ -42,7 +39,7 @@ pub struct AppLookupIter<T> {
 
 impl AppLookup {
   pub fn iter(&self) -> AppLookupIter<AppLaunch> {
-    let conf = self.config.0.get();
+    let conf = &self.config;
     AppLookupIter {
       cache: self.cache.clone(),
       extension: conf.app_extension.clone(),
@@ -57,7 +54,7 @@ impl AppLookup {
 
   pub fn init(&self) -> Result<(), anyhow::Error> {
     let items = {
-      let conf = self.config.0.get();
+      let conf = &self.config;
       let apps = AppLookupIter {
         cache: self.cache.clone(),
         extension: conf.app_extension.clone(),

@@ -1,10 +1,12 @@
-use std::sync::Arc;
-
+use crate::{
+  plugin::{AppState, OkAction},
+  plugin_manager::PluginManager,
+};
 use egui::{
   Align, Event, EventFilter, FontId, InputState, Key, Modifiers, TextBuffer, TextEdit, ViewportId,
 };
-use lyra_plugin::{AppState, OkAction, PluginManager};
 use parking_lot::RwLock;
+use std::sync::Arc;
 use tracing::error;
 
 use crate::{

@@ -1,16 +1,13 @@
-mod config;
-use crate::{
-  AppState, Config, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable,
-  SearchBlocker,
+use crate::config::CalcConfig;
+use crate::plugin::{
+  AppState, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable, SearchBlocker,
 };
 use anyhow::anyhow;
 use arboard::Clipboard;
 use calc::Context;
-use config::CalcConf;
 use egui::{Color32, RichText};
 use parking_lot::Mutex;
-use serde_json::Value;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 pub const PLUGIN_NAME: &'static str = "calc";
 
@@ -25,7 +22,7 @@ pub enum Evaluated {
 }
 
 pub struct CalcPlugin {
-  cfg: CalcConf,
+  cfg: CalcConfig,
   clip: Mutex<Clipboard>,
 }
 
@@ -58,10 +55,9 @@ impl Renderable for Evaluated {
 impl SearchBlocker for Evaluated {}
 
 impl CalcPlugin {
-  pub fn init(conf_dir: &PathBuf, _: &PathBuf, clip: Clipboard) -> Result<Self, anyhow::Error> {
-    let cfg = Config::load(conf_dir.join(format!("{}.toml", PLUGIN_NAME)))?;
+  pub fn init(cfg: CalcConfig, clip: Clipboard) -> Result<Self, anyhow::Error> {
     Ok(CalcPlugin {
-      cfg: CalcConf(cfg),
+      cfg,
       clip: Mutex::new(clip),
     })
   }
@@ -120,16 +116,8 @@ impl CalcPlugin {
 impl Plugin for CalcPlugin {
   type PV = Evaluated;
 
-  fn get_config(&self) -> Value {
-    serde_json::to_value((*self.cfg.0.get()).clone()).unwrap()
-  }
-
-  fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
-    self.cfg.update(updates)
-  }
-
   fn prefix(&self) -> Option<String> {
-    Some(self.cfg.0.get().prefix.clone())
+    Some(self.cfg.prefix.clone())
   }
 
   fn action(&self, input: &Evaluated) -> Result<OkAction, anyhow::Error> {

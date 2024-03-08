@@ -1,19 +1,9 @@
-mod apps;
-mod calc;
-mod config;
-mod plugin_manager;
-mod webq;
-
+use crate::apps::{self, AppLaunch, AppsPlugin};
+use crate::calc::{self, CalcPlugin, Evaluated};
+use crate::webq::{self, Searcher, WebqPlugin};
 use anyhow::anyhow;
-use apps::{AppLaunch, AppsPlugin};
-use calc::{CalcPlugin, Evaluated};
-pub use config::*;
-pub use plugin_manager::*;
-
 use egui::Ui;
-use serde_json::Value;
-use std::{collections::HashMap, fmt, sync::Arc};
-use webq::{Searcher, WebqPlugin};
+use std::{fmt, sync::Arc};
 
 pub enum Plugins {
   Apps(AppsPlugin),
@@ -34,22 +24,6 @@ impl Plugins {
       Plugins::Apps(_) => apps::PLUGIN_NAME.to_owned(),
       Plugins::Calc(_) => calc::PLUGIN_NAME.to_owned(),
       Plugins::Webq(_) => webq::PLUGIN_NAME.to_owned(),
-    }
-  }
-
-  pub fn get_config(&self) -> Value {
-    match self {
-      Plugins::Apps(pi) => pi.get_config(),
-      Plugins::Calc(pi) => pi.get_config(),
-      Plugins::Webq(pi) => pi.get_config(),
-    }
-  }
-
-  pub fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
-    match self {
-      Plugins::Apps(pi) => pi.update_config(updates),
-      Plugins::Calc(pi) => pi.update_config(updates),
-      Plugins::Webq(pi) => pi.update_config(updates),
     }
   }
 
@@ -193,14 +167,6 @@ pub trait PluginValue: SearchBlocker + Renderable {}
 pub type PluginName = String;
 pub trait Plugin: Send + Sync {
   type PV: PluginValue;
-
-  /// Return the config object backing this plugin for UI hydration
-  fn get_config(&self) -> Value;
-
-  /// With the given updates, plugins should merge their in-memory view of their configuration
-  /// and write their config out. If there's a problem validating
-  /// the resolved structure or otherwise serializing, an error can be returned.
-  fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error>;
 
   /// Not all plugins need to have a validation routine, so this method is optional. In some cases,
   /// however, plguins may have specific values that need to be validated either during configuration

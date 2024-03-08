@@ -2,7 +2,6 @@
 resolver = "2"
 members = [ 
   "lyra-common",
-  "lyra-plugin",
   "lyra-ui",
 ]
 

@@ -4,12 +4,21 @@ mod logs;
 mod powerbar;
 mod settings;
 
+// Plugins
+mod apps;
+mod calc;
+mod plugin;
+mod plugin_manager;
+mod template;
+mod webq;
+
 use anyhow::anyhow;
 use egui::{IconData, ViewportBuilder, ViewportId};
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
-use lyra_plugin::{AppState, PluginManager};
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+use plugin::AppState;
+use plugin_manager::PluginManager;
 use powerbar::{LyraPowerbar, LyraPowerbarImpl};
 use settings::LyraSettings;
 use std::sync::Arc;
@@ -89,7 +98,7 @@ fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   //       Alternatively need to display a message when no plugins are active, but better
   //       to have defaults.
   let config = Config::get_or_init_config().map(Arc::new)?;
-  let plugins = PluginManager::init(&config.get().plugins, &config.conf_dir, &config.cache_dir)?;
+  let plugins = PluginManager::init(&config)?;
 
   Ok(LyraUiBuilder {
     config: config.clone(),

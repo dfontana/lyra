@@ -1,25 +1,21 @@
+pub mod app_convert;
 mod applookup;
-mod config;
-mod convert;
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
-use crate::{
-  AppState, Config, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable,
-  SearchBlocker,
+use crate::config::{AppCache, AppsConfig};
+use crate::plugin::{
+  AppState, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable, SearchBlocker,
 };
 use anyhow::{anyhow, Context};
 use applookup::AppLookup;
-use config::{AppCache, AppConf};
 use egui::{Image, RichText};
 use lyra_common::convert as lyra_convert;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use std::{path::PathBuf, sync::Arc};
 
 pub const PLUGIN_NAME: &'static str = "apps";
 
 pub struct AppsPlugin {
-  cfg: Arc<AppConf>,
+  cfg: AppsConfig,
   apps: AppLookup,
 }
 
@@ -51,10 +47,7 @@ impl Renderable for AppLaunch {
 impl SearchBlocker for AppLaunch {}
 
 impl AppsPlugin {
-  pub fn init(conf_dir: &PathBuf, cache_dir: &PathBuf) -> Result<Self, anyhow::Error> {
-    let cfg = Arc::new(AppConf(Config::load(
-      conf_dir.join(format!("{}.toml", PLUGIN_NAME)),
-    )?));
+  pub fn init(cfg: AppsConfig, cache_dir: &PathBuf) -> Result<Self, anyhow::Error> {
     let cache = AppCache::load(cache_dir.join(format!("app_icons.toml")))?;
     let apps = AppLookup {
       config: cfg.clone(),
@@ -67,14 +60,6 @@ impl AppsPlugin {
 
 impl Plugin for AppsPlugin {
   type PV = AppLaunch;
-
-  fn get_config(&self) -> Value {
-    serde_json::to_value((*self.cfg.0.get()).clone()).unwrap()
-  }
-
-  fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
-    self.cfg.update(updates)
-  }
 
   fn action(&self, input: &AppLaunch) -> Result<OkAction, anyhow::Error> {
     open::that(input.path.clone())

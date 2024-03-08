@@ -1,37 +1,35 @@
-use std::{
-  collections::{hash_map::Values, HashMap},
-  path::PathBuf,
-  sync::Arc,
-};
-
 use crate::{
   apps::{self, AppsPlugin},
   calc::{self, CalcPlugin},
+  config::Config,
+  plugin::{OkAction, PluginName, PluginV, Plugins},
   webq::{self, WebqPlugin},
-  OkAction, PluginName, PluginV, Plugins,
 };
 use anyhow::anyhow;
 use arboard::Clipboard;
-use serde_json::Value;
+use std::{
+  collections::{hash_map::Values, HashMap},
+  sync::Arc,
+};
 
 #[derive(Clone)]
 pub struct PluginManager(Arc<HashMap<PluginName, Plugins>>);
 
 impl PluginManager {
-  pub fn init(
-    plugins: &Vec<String>,
-    conf_dir: &PathBuf,
-    cache_dir: &PathBuf,
-  ) -> Result<Self, anyhow::Error> {
-    let plugs: Result<HashMap<_, _>, _> = plugins
+  pub fn init(config: &Arc<Config>) -> Result<Self, anyhow::Error> {
+    let cfg = config.get();
+    let plugs: Result<HashMap<_, _>, _> = cfg
+      .plugins
       .iter()
       .map(|pn| {
         let pl = match pn.as_str() {
           calc::PLUGIN_NAME => {
-            Plugins::Calc(CalcPlugin::init(conf_dir, cache_dir, Clipboard::new()?)?)
+            Plugins::Calc(CalcPlugin::init(cfg.calc.clone(), Clipboard::new()?)?)
           }
-          webq::PLUGIN_NAME => Plugins::Webq(WebqPlugin::init(conf_dir, cache_dir)?),
-          apps::PLUGIN_NAME => Plugins::Apps(AppsPlugin::init(conf_dir, cache_dir)?),
+          webq::PLUGIN_NAME => Plugins::Webq(WebqPlugin::init(cfg.webq.clone())?),
+          apps::PLUGIN_NAME => {
+            Plugins::Apps(AppsPlugin::init(cfg.apps.clone(), &config.cache_dir)?)
+          }
           _ => return Err(anyhow!("{} is an unknown plugin", pn)),
         };
         Ok((pl.id(), pl))
@@ -57,15 +55,6 @@ impl PluginManager {
 
   pub fn iter(&self) -> Values<'_, String, Plugins> {
     self.0.values()
-  }
-
-  /// Return all the serialized configs for each plugin so the UI can hydrate settings
-  pub fn get_configs(&self) -> HashMap<PluginName, Value> {
-    self
-      .0
-      .iter()
-      .map(|(pn, pl)| (pn.clone(), pl.get_config()))
-      .collect()
   }
 
   /// Return the plugins whose prefix are found within the search string, or if none

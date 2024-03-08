@@ -1,12 +1,12 @@
-use std::sync::Arc;
-
 use crate::config::Config;
-use lyra_plugin::{FuzzyMatchItem, PluginManager, PluginV};
+use crate::plugin::{FuzzyMatchItem, PluginV};
+use crate::plugin_manager::PluginManager;
 use nucleo_matcher::{
   pattern::{CaseMatching, Pattern},
   Config as NucleoConfig, Matcher,
 };
 use parking_lot::RwLock;
+use std::sync::Arc;
 
 pub struct Launcher {
   pub config: Arc<Config>,

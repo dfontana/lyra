@@ -1,19 +1,13 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
-
-use crate::{
-  AppState, Config, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable,
-  SearchBlocker,
+use crate::config::{SearchConfig, WebqConfig};
+use crate::plugin::{
+  AppState, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable, SearchBlocker,
 };
+use crate::template::Template;
 use anyhow::anyhow;
-use config::{SearchConfig, WebqConf};
 use egui::{Image, RichText, Ui};
 use lyra_common::convert;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use template::Template;
-
-mod config;
-mod template;
+use std::{str::FromStr, sync::Arc};
 
 pub const PLUGIN_NAME: &'static str = "webq";
 
@@ -25,7 +19,7 @@ pub const PLUGIN_NAME: &'static str = "webq";
 ///   3. A "bookmark" which is just a template that has no arguments
 /// All of this should be generalizable over the first case, hence the single plugin
 pub struct WebqPlugin {
-  cfg: WebqConf,
+  cfg: WebqConfig,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -72,22 +66,13 @@ impl Renderable for Searcher {
 }
 
 impl WebqPlugin {
-  pub fn init(conf_dir: &PathBuf, _: &PathBuf) -> Result<Self, anyhow::Error> {
-    let cfg = Config::load(conf_dir.join(format!("{}.toml", PLUGIN_NAME)))?;
-    Ok(WebqPlugin { cfg: WebqConf(cfg) })
+  pub fn init(cfg: WebqConfig) -> Result<Self, anyhow::Error> {
+    Ok(WebqPlugin { cfg })
   }
 }
 
 impl Plugin for WebqPlugin {
   type PV = Searcher;
-
-  fn get_config(&self) -> Value {
-    serde_json::to_value((*self.cfg.0.get()).clone()).unwrap()
-  }
-
-  fn update_config(&self, updates: HashMap<String, Value>) -> Result<(), anyhow::Error> {
-    self.cfg.update(updates)
-  }
 
   fn validate_value(&self, input_type: &str, input_value: &str) -> Result<(), anyhow::Error> {
     match input_type {
@@ -143,13 +128,14 @@ impl Plugin for WebqPlugin {
       //       + a space & then updating template state
       return Err(anyhow!("Templating is not complete"));
     }
-    let cfg = self.cfg.0.get();
-    cfg
+    self
+      .cfg
       .searchers
       .get(&input.label)
       .or_else(|| {
         // Check if it's the default real quick before bailing
-        cfg
+        self
+          .cfg
           .default_searcher
           .as_ref()
           .filter(|sc| sc.label == input.label)
@@ -162,14 +148,7 @@ impl Plugin for WebqPlugin {
   }
 
   fn options(&self, _: &str) -> Vec<FuzzyMatchItem> {
-    self
-      .cfg
-      .0
-      .get()
-      .searchers
-      .iter()
-      .map(|(_, sh)| sh.into())
-      .collect()
+    self.cfg.searchers.iter().map(|(_, sh)| sh.into()).collect()
   }
 
   fn has_static_items(&self) -> bool {
@@ -177,7 +156,7 @@ impl Plugin for WebqPlugin {
   }
 
   fn static_items(&self) -> Vec<FuzzyMatchItem> {
-    match &self.cfg.0.get().default_searcher {
+    match &self.cfg.default_searcher {
       Some(sh) => vec![sh.into()],
       None => vec![],
     }

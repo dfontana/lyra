@@ -2611,47 +2611,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "lyra-plugin"
+name = "lyra-ui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "arboard",
  "base64",
  "calc",
- "egui",
- "glob",
- "icns",
- "lalrpop-util",
- "lyra-common",
- "nucleo-matcher",
- "open",
- "parking_lot",
- "plist",
- "serde",
- "serde_json",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "lyra-ui"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
  "chrono",
  "derive_builder",
  "eframe",
  "egui",
  "egui_extras",
+ "glob",
  "global-hotkey",
  "gtk",
+ "icns",
  "image",
  "itertools 0.12.1",
- "lyra-plugin",
+ "lalrpop-util",
+ "lyra-common",
  "nucleo-matcher",
  "once_cell",
+ "open",
  "parking_lot",
+ "plist",
  "serde",
  "serde_json",
  "toml",
