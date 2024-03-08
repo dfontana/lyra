@@ -54,6 +54,8 @@ pub struct WebqSearchConfig {
   pub label: String,
   pub shortname: String,
   pub template: Template,
+  // TODO: This should be normalized into a separate file since it makes editing the main config very hard/clogged up.
+  //       If we just gave this a unique ID and then lookup from the other file it would be less painful
   pub icon: String,
 }
 
