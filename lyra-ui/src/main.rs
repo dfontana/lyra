@@ -124,7 +124,7 @@ impl LyraUiBuilder {
         launcher: self.launcher,
         config: self.config.clone(),
       }),
-      settings: LyraSettings::default(),
+      settings: LyraSettings::new(self.config.clone()),
     }
   }
 }

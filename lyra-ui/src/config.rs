@@ -1,7 +1,7 @@
 use crate::{plugin::PluginName, plugin_manager::PluginManager};
 use anyhow::Context;
 use egui::{Color32, FontFamily, Margin, Rounding};
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockWriteGuard};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, ops::Deref, path::PathBuf};
 use tracing::{error, info};
@@ -182,7 +182,12 @@ impl Config {
     self.config.read()
   }
 
-  fn persist(&self) -> Result<(), anyhow::Error> {
+  pub fn update<'a>(&'a self, func: impl Fn(RwLockWriteGuard<'a, InnerConfig>)) {
+    let inner = self.config.write();
+    func(inner);
+  }
+
+  pub fn persist(&self) -> Result<(), anyhow::Error> {
     let inner = self.config.read();
     fs::write(&self.file, toml::to_string(&*inner)?)?;
     Ok(())
