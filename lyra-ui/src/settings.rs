@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use egui::{Layout, TextEdit, ViewportId, Widget};
+use egui::{Color32, Layout, Stroke, TextEdit, ViewportId, Widget};
 use egui_extras::{Column, TableBuilder};
 use parking_lot::RwLock;
 use tracing::warn;
@@ -50,6 +50,13 @@ impl LyraSettings {
 }
 
 impl LyraSettings {
+  fn validate_xy(v: f32) -> Result<(), String> {
+    if v < 0.0 {
+      return Err("Must be larger than 0".into());
+    }
+    Ok(())
+  }
+
   pub fn update(&mut self, ctx: &egui::Context) {
     if !*self.visible.read() {
       return;
@@ -66,26 +73,27 @@ impl LyraSettings {
         egui::CentralPanel::default().show(ctx, |ui| {
           ui.horizontal_top(|ui| {
             ui.label("Window Placement");
-            ui.label("X:");
-            ui.add(TextEdit::singleline(&mut self.window_x).desired_width(35.0));
-            ui.label("Y:");
-            ui.add(TextEdit::singleline(&mut self.window_y).desired_width(35.0));
+            ui.add(
+              // TODO: Store a ref to this input and extract value on save
+              //       Or is there a better way to gather the form :thinking:
+              Input::new("X:", &mut self.window_x)
+                .f32(&LyraSettings::validate_xy)
+                .desired_width(35.0),
+            );
+            ui.add(
+              Input::new("Y:", &mut self.window_y)
+                .f32(&LyraSettings::validate_xy)
+                .desired_width(35.0),
+            );
           });
           ui.separator();
           ui.label("Default Search");
           ui.vertical(|ui| {
+            ui.add(Input::new("Label:", &mut self.webq_label).desired_width(200.0));
+            ui.add(Input::new("Template:", &mut self.webq_template).desired_width(400.0));
             ui.horizontal(|ui| {
-              ui.label("Label:");
-              ui.add(TextEdit::singleline(&mut self.webq_label).desired_width(200.0));
-            });
-            ui.horizontal(|ui| {
-              ui.label("Template:");
-              ui.add(TextEdit::singleline(&mut self.webq_template).desired_width(400.0));
-            });
-            ui.horizontal(|ui| {
-              ui.label("Image:");
               let img = self.webq_image.clone();
-              ui.text_edit_singleline(&mut self.webq_image);
+              ui.add(Input::new("Image:", &mut self.webq_image).desired_width(400.0));
               if !img.is_empty() {
                 ui.image(img);
               }
@@ -142,62 +150,77 @@ impl LyraSettings {
   }
 }
 
-// TODO: How can I make an input that's generic to the underlying type?
-trait InputValidator<T> {
-  fn validate(inp: T) -> Result<(), String>;
+struct Input<'a, T> {
+  label: &'a str,
+  value: &'a mut String,
+  validator: Box<dyn Fn(&String) -> Result<T, String>>,
+  desired_width: Option<f32>,
 }
 
-struct LabelledInput<T> {
-  label: String,
-  value: T,
-  validator: fn(T) -> Result<(), String>,
-}
-
-impl<T> LabelledInput<T> {
-  pub fn new_f32(value: f32, label: String) -> Self {
-    LabelledInput {
+impl<'a> Input<'a, String> {
+  pub fn new(label: &'a str, value: &'a mut String) -> Input<'a, String> {
+    Input {
       label,
       value,
-      validator: validate_f32,
+      desired_width: None,
+      validator: Box::new(|v| Ok(v.to_owned())),
+    }
+  }
+
+  pub fn f32(self, validator: impl Fn(f32) -> Result<(), String> + 'static) -> Input<'a, f32> {
+    let wrapped = Box::new(move |v: &String| {
+      v.parse::<f32>()
+        .map_err(|_| format!("{} is not a number", v))
+        .and_then(|v| (validator)(v).map(|_| v))
+    });
+    Input {
+      validator: wrapped,
+      label: self.label,
+      value: self.value,
+      desired_width: self.desired_width,
     }
   }
 }
 
-struct F32Input(LabelledInput<f32>);
-impl F32Input {
-  pub fn new(value: f32, label: String) -> Self {
-    Self(LabelledInput {
-      label,
-      value,
-      validator: F32Input::validate,
-    })
+impl<'a, T> Input<'a, T> {
+  #[inline]
+  fn desired_width(mut self, v: f32) -> Self {
+    self.desired_width = Some(v);
+    self
   }
-  pub fn validate(value: f32) -> Result<(), String> {
-    todo!()
+
+  fn validate(&self) -> Result<T, String> {
+    (self.validator)(&self.value)
+  }
+
+  pub fn value(&self) -> Option<T> {
+    self.validate().ok()
   }
 }
 
-trait Input {
-  // fn validate(inp: T) -> Result<(), String>;
-}
-
-impl Input for F32Input {}
-
-impl<T> Widget for LabelledInput<T> {
+impl<'a, T> Widget for Input<'a, T> {
   fn ui(self, ui: &mut egui::Ui) -> egui::Response {
     ui.allocate_ui_with_layout(
-      [100.0, 100.0].into(),
+      ui.available_size(),
       Layout::left_to_right(egui::Align::Min),
       |ui| {
-        ui.label("X:");
-        ui.add(TextEdit::singleline(&mut self.value).desired_width(35.0));
+        ui.label(self.label);
+        let err = self.validate().err();
+        if err.is_some() {
+          let invalid = Stroke::new(1.0, Color32::RED);
+          ui.style_mut().visuals.widgets.inactive.bg_stroke = invalid;
+          ui.style_mut().visuals.widgets.hovered.bg_stroke = invalid;
+          ui.style_mut().visuals.selection.stroke = invalid;
+        };
+        let edit = ui.add(
+          TextEdit::singleline(self.value)
+            .desired_width(self.desired_width.unwrap_or(f32::INFINITY)),
+        );
+        if let Some(err) = err {
+          edit.on_hover_text(err);
+        }
       },
     )
     .response
   }
 }
-// impl Widget for NumberInput {
-//   fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-//     todo!()
-//   }
-// }
