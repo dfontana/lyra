@@ -182,7 +182,7 @@ impl Config {
     self.config.read()
   }
 
-  pub fn update<'a>(&'a self, func: impl Fn(RwLockWriteGuard<'a, InnerConfig>)) {
+  pub fn update<'a>(&'a self, func: impl FnOnce(RwLockWriteGuard<'a, InnerConfig>)) {
     let inner = self.config.write();
     func(inner);
   }

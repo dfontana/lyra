@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ 
+members = [ "form-macro", 
   "lyra-common",
   "lyra-ui",
 ]
