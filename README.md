@@ -18,6 +18,8 @@
 
 Nearly there! Final polishes on MacOs before we can start focusing back on Linux/Windows experience.
 
+TODO - Tray icon segfaults on Linux. The tray-icon examples throw the same assertion failed error but do not segfault on click. This smells like maybe the issue is actually related to opening the dropdown menu. Will need to alter the examples more to explore
+
 ## Roadmap
 
 #### MVP 1: Calc, Bookmarks, Templatables, App Launcher (MacOS only)
