@@ -41,6 +41,12 @@ impl From<Template> for String {
   }
 }
 
+impl ToString for Template {
+    fn to_string(&self) -> String {
+        self.val.clone()
+    }
+}
+
 #[derive(PartialEq)]
 enum State {
   Opened,

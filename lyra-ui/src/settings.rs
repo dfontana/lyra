@@ -20,25 +20,90 @@ pub struct LyraSettings {
   pub visible: Arc<RwLock<bool>>,
   config: Arc<Config>,
   // AppData
-  window_x: FieldData<f32>,
-  window_y: FieldData<f32>,
+  window_x: FieldData<WindowCoordinate>,
+  window_y: FieldData<WindowCoordinate>,
   webq_label: FieldData<String>,
-  // TODO use Template type
-  webq_template: FieldData<String>,
+  webq_template: FieldData<Template>,
   webq_image: FieldData<String>,
+}
+
+impl TryParse for Template {
+    type Output = Template;
+    fn try_parse(v: &String) -> Result<Self::Output, String> {
+        todo!()
+    }
+}
+
+impl Validate for Template {
+    type Input = Template;
+    fn validate(v: &Self::Input) -> Result<(), String> {
+        todo!()
+    }
+}
+
+impl TryParse for String {
+  type Output = String;
+  fn try_parse(v: &String) -> Result<Self::Output, String> {
+    Ok(v.clone())
+  }
+}
+
+impl Validate for String {
+  type Input = String;
+  fn validate(_v: &Self::Input) -> Result<(), String> {
+    Ok(())
+  }
+}
+
+#[derive(Clone)]
+struct WindowCoordinate(f32);
+impl ToString for WindowCoordinate {
+  fn to_string(&self) -> String {
+    self.0.to_string()
+  }
+}
+
+// TODO: Is anything derivable here? Like a default?
+impl TryParse for WindowCoordinate {
+  type Output = Self;
+  fn try_parse(v: &String) -> Result<Self::Output, String> {
+    v.parse::<f32>()
+      .map_err(|_| format!("{} is not a number", v))
+      .map(|v| WindowCoordinate(v))
+  }
+}
+
+impl Validate for WindowCoordinate {
+  type Input = Self;
+  fn validate(v: &Self::Input) -> Result<(), String> {
+    if v.0 < 0.0 {
+      return Err("Must be larger than 0".into());
+    }
+    Ok(())
+  }
 }
 
 impl LyraSettings {
   pub fn new(config: Arc<Config>) -> Self {
-    let window_x;
-    let window_y;
+    // TODO: This construction logic might be less redundant if all fields
+    // went into a mutable struct initialized with ::default()?
+    let window_x: WindowCoordinate;
+    let window_y: WindowCoordinate;
+    let mut webq_label = String::new();
+    let mut webq_template = Template::default();
+    let mut webq_image = String::new();
     {
       let cfg = config.get();
       match cfg.styles.window_placement {
         Placement::XY(x, y) => {
-          window_x = x;
-          window_y = y;
+          window_x = WindowCoordinate(x);
+          window_y = WindowCoordinate(y);
         }
+      }
+      if let Some(webq) = &cfg.webq.default_searcher {
+        webq_label = webq.label.clone();
+        webq_template = webq.template.clone();
+        webq_image = webq.icon.clone();
       }
     }
     LyraSettings {
@@ -47,22 +112,15 @@ impl LyraSettings {
       visible: Arc::new(RwLock::new(false)),
       window_x: FieldData::new(window_x),
       window_y: FieldData::new(window_y),
-      webq_label: FieldData::new(String::new()),
-      webq_template: FieldData::new(String::new()),
-      webq_image: FieldData::new(String::new()),
+      webq_label: FieldData::new(webq_label),
+      webq_template: FieldData::new(webq_template),
+      webq_image: FieldData::new(webq_image),
       config,
     }
   }
 }
 
 impl LyraSettings {
-  fn validate_xy(v: &f32) -> Result<(), String> {
-    if *v < 0.0 {
-      return Err("Must be larger than 0".into());
-    }
-    Ok(())
-  }
-
   pub fn update(&mut self, ctx: &egui::Context) {
     if !*self.visible.read() {
       return;
@@ -80,28 +138,26 @@ impl LyraSettings {
           ui.horizontal_top(|ui| {
             ui.label("Window Placement");
             ui.add(
-              Input::f32("X:", &mut self.window_x)
-                .validated(&LyraSettings::validate_xy)
+              Input::of("X:", &mut self.window_x)
                 .desired_width(35.0),
             );
             ui.add(
-              Input::f32("Y:", &mut self.window_y)
-                .validated(&LyraSettings::validate_xy)
+              Input::of("Y:", &mut self.window_y)
                 .desired_width(35.0),
             );
           });
           ui.separator();
           ui.label("Default Search");
           ui.vertical(|ui| {
-            ui.add(Input::str("Label:", &mut self.webq_label).desired_width(200.0));
-            ui.add(Input::str("Template:", &mut self.webq_template).desired_width(400.0));
+            ui.add(Input::of("Label:", &mut self.webq_label).desired_width(200.0));
+            ui.add(Input::of("Template:", &mut self.webq_template).desired_width(400.0));
             ui.horizontal(|ui| {
               let img = self
                 .webq_image
                 .value
                 .clone()
                 .unwrap_or_else(|_| String::new());
-              ui.add(Input::str("Image:", &mut self.webq_image).desired_width(400.0));
+              ui.add(Input::of("Image:", &mut self.webq_image).desired_width(400.0));
               if !img.is_empty() {
                 ui.image(img);
               }
@@ -143,11 +199,11 @@ impl LyraSettings {
           if ui.button("Save").clicked() {
             if let Ok(res) = TryInto::<LyraSettingsFormResult>::try_into(&*self) {
               self.config.update(move |mut inner| {
-                inner.styles.window_placement = Placement::XY(res.window_x, res.window_y);
+                inner.styles.window_placement = Placement::XY(res.window_x.0, res.window_y.0);
                 inner.webq.default_searcher = Some(WebqSearchConfig {
                   label: res.webq_label,
                   shortname: "".into(),
-                  template: Template::default(),
+                  template: res.webq_template,
                   icon: res.webq_image,
                 })
                 // TODO: Add more fields
@@ -168,12 +224,24 @@ impl LyraSettings {
 }
 
 // TODO: Separate crate https://stackoverflow.com/questions/73691794/expose-struct-generated-from-quote-macro-without-appearing-out-of-nowhere
-struct FieldData<T: Clone> {
+// TODO: Should parse & validate just be traits T should satisfy? Can newtype when the behavior is diff.
+//       That would also make the Input constructor simplified no wouldn't it :thinkies:
+struct FieldData<T: Clone + TryParse<Output = T> + Validate<Input = T>> {
   buffer: String,
   value: Result<T, String>,
 }
 
-impl<T: ToString + Clone> FieldData<T> {
+trait TryParse {
+  type Output;
+  fn try_parse(v: &String) -> Result<Self::Output, String>;
+}
+
+trait Validate {
+  type Input;
+  fn validate(v: &Self::Input) -> Result<(), String>;
+}
+
+impl<T: ToString + Clone + TryParse<Output = T> + Validate<Input = T>> FieldData<T> {
   pub fn new(value: T) -> FieldData<T> {
     let buffer = value.to_string();
     FieldData {
@@ -181,65 +249,40 @@ impl<T: ToString + Clone> FieldData<T> {
       buffer,
     }
   }
-}
 
-struct Input<'a, T: Clone> {
-  label: &'a str,
-  field: &'a mut FieldData<T>,
-  parser: Box<dyn Fn(&String) -> Result<T, String>>,
-  validator: Box<dyn Fn(&T) -> Result<(), String>>,
-  desired_width: Option<f32>,
-}
-
-impl<'a> Input<'a, String> {
-  pub fn str(label: &'a str, field: &'a mut FieldData<String>) -> Input<'a, String> {
-    Input {
-      label,
-      field,
-      desired_width: None,
-      parser: Box::new(|v| Ok(v.to_owned())),
-      validator: Box::new(|_| Ok(())),
-    }
-  }
-
-  pub fn f32(label: &'a str, field: &'a mut FieldData<f32>) -> Input<'a, f32> {
-    Input {
-      label,
-      field,
-      desired_width: None,
-      parser: Box::new(|v| {
-        v.parse::<f32>()
-          .map_err(|_| format!("{} is not a number", v))
-      }),
-      validator: Box::new(|_| Ok(())),
-    }
-  }
-}
-
-impl<'a, T: Clone> Input<'a, T> {
-  #[inline]
-  fn desired_width(mut self, v: f32) -> Self {
-    self.desired_width = Some(v);
-    self
-  }
-
-  #[inline]
-  fn validated(mut self, validator: impl Fn(&T) -> Result<(), String> + 'static) -> Self {
-    self.validator = Box::new(validator);
-    self
-  }
-
-  fn parse_and_validate(self) {
-    self.field.value = (self.parser)(&self.field.buffer);
-    if let Ok(v) = self.field.value.as_ref() {
-      if let Err(err) = (self.validator)(&v) {
-        self.field.value = Err(err);
+  pub fn parse_and_validate(&mut self) {
+    self.value = <T as TryParse>::try_parse(&self.buffer);
+    if let Ok(v) = self.value.as_ref() {
+      if let Err(err) = <T as Validate>::validate(v) {
+        self.value = Err(err);
       }
     }
   }
 }
 
-impl<'a, T: Clone> Widget for Input<'a, T> {
+struct Input<'a, T: Clone + TryParse<Output = T> + Validate<Input = T>> {
+  label: &'a str,
+  field: &'a mut FieldData<T>,
+  desired_width: Option<f32>,
+}
+
+impl<'a, T: Clone + TryParse<Output = T> + Validate<Input = T>> Input<'a, T> {
+  pub fn of(label: &'a str, field: &'a mut FieldData<T>) -> Input<'a, T> {
+    Input {
+      label,
+      field,
+      desired_width: None,
+    }
+  }
+
+  #[inline]
+  fn desired_width(mut self, v: f32) -> Self {
+    self.desired_width = Some(v);
+    self
+  }
+}
+
+impl<'a, T: ToString + Clone + TryParse<Output = T> + Validate<Input = T>> Widget for Input<'a, T> {
   fn ui(self, ui: &mut egui::Ui) -> egui::Response {
     ui.allocate_ui_with_layout(
       ui.available_size(),
@@ -260,7 +303,7 @@ impl<'a, T: Clone> Widget for Input<'a, T> {
           edit = edit.on_hover_text(err);
         }
         if edit.changed() {
-          self.parse_and_validate();
+          self.field.parse_and_validate();
         }
       },
     )
