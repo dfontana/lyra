@@ -1,9 +1,9 @@
-use std::sync::Arc;
-
+use derive_more::{Display, FromStr};
 use egui::{Color32, Layout, Stroke, TextEdit, ViewportId, Widget};
 use egui_extras::{Column, TableBuilder};
-use form_macro::FormResult;
+use form::{FormField, FormFieldData, FormResult, Validate};
 use parking_lot::RwLock;
+use std::sync::Arc;
 use tracing::warn;
 
 use crate::{
@@ -13,69 +13,40 @@ use crate::{
 
 const LYRA_SETTINGS: &str = "Lyra Settings";
 
-#[derive(FormResult)]
 pub struct LyraSettings {
   pub id: ViewportId,
   pub title: String,
   pub visible: Arc<RwLock<bool>>,
   config: Arc<Config>,
-  // AppData
-  window_x: FieldData<WindowCoordinate>,
-  window_y: FieldData<WindowCoordinate>,
-  webq_label: FieldData<String>,
-  webq_template: FieldData<Template>,
-  webq_image: FieldData<String>,
+  form: LyraSettingsForm,
 }
 
-impl TryParse for Template {
-    type Output = Template;
-    fn try_parse(v: &String) -> Result<Self::Output, String> {
-        todo!()
-    }
+#[derive(FormResult, Default)]
+struct LyraSettingsForm {
+  window_x: FormField<WindowCoordinate>,
+  window_y: FormField<WindowCoordinate>,
+  webq_label: FormField<WebqLabel>,
+  webq_template: FormField<Template>,
+  webq_image: FormField<WebqImage>,
 }
 
 impl Validate for Template {
-    type Input = Template;
-    fn validate(v: &Self::Input) -> Result<(), String> {
-        todo!()
-    }
-}
-
-impl TryParse for String {
-  type Output = String;
-  fn try_parse(v: &String) -> Result<Self::Output, String> {
-    Ok(v.clone())
-  }
-}
-
-impl Validate for String {
-  type Input = String;
-  fn validate(_v: &Self::Input) -> Result<(), String> {
+  fn validate(_v: &Self) -> Result<(), String> {
+    // TODO actually implement this, if there's anything left after parse
     Ok(())
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
+struct WebqLabel(String);
+
+#[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
+struct WebqImage(String);
+
+#[derive(Clone, Default, Display, FormFieldData, FromStr)]
 struct WindowCoordinate(f32);
-impl ToString for WindowCoordinate {
-  fn to_string(&self) -> String {
-    self.0.to_string()
-  }
-}
-
-// TODO: Is anything derivable here? Like a default?
-impl TryParse for WindowCoordinate {
-  type Output = Self;
-  fn try_parse(v: &String) -> Result<Self::Output, String> {
-    v.parse::<f32>()
-      .map_err(|_| format!("{} is not a number", v))
-      .map(|v| WindowCoordinate(v))
-  }
-}
-
 impl Validate for WindowCoordinate {
-  type Input = Self;
-  fn validate(v: &Self::Input) -> Result<(), String> {
+  fn validate(v: &Self) -> Result<(), String> {
     if v.0 < 0.0 {
       return Err("Must be larger than 0".into());
     }
@@ -85,37 +56,27 @@ impl Validate for WindowCoordinate {
 
 impl LyraSettings {
   pub fn new(config: Arc<Config>) -> Self {
-    // TODO: This construction logic might be less redundant if all fields
-    // went into a mutable struct initialized with ::default()?
-    let window_x: WindowCoordinate;
-    let window_y: WindowCoordinate;
-    let mut webq_label = String::new();
-    let mut webq_template = Template::default();
-    let mut webq_image = String::new();
+    let mut form = LyraSettingsForm::default();
     {
       let cfg = config.get();
       match cfg.styles.window_placement {
         Placement::XY(x, y) => {
-          window_x = WindowCoordinate(x);
-          window_y = WindowCoordinate(y);
+          form.window_x = FormField::new(WindowCoordinate(x));
+          form.window_y = FormField::new(WindowCoordinate(y));
         }
       }
       if let Some(webq) = &cfg.webq.default_searcher {
-        webq_label = webq.label.clone();
-        webq_template = webq.template.clone();
-        webq_image = webq.icon.clone();
+        form.webq_label = FormField::new(WebqLabel(webq.label.clone()));
+        form.webq_template = FormField::new(webq.template.clone());
+        form.webq_image = FormField::new(WebqImage(webq.icon.clone()));
       }
     }
     LyraSettings {
       id: ViewportId::from_hash_of(LYRA_SETTINGS),
       title: LYRA_SETTINGS.into(),
       visible: Arc::new(RwLock::new(false)),
-      window_x: FieldData::new(window_x),
-      window_y: FieldData::new(window_y),
-      webq_label: FieldData::new(webq_label),
-      webq_template: FieldData::new(webq_template),
-      webq_image: FieldData::new(webq_image),
       config,
+      form,
     }
   }
 }
@@ -137,27 +98,23 @@ impl LyraSettings {
         egui::CentralPanel::default().show(ctx, |ui| {
           ui.horizontal_top(|ui| {
             ui.label("Window Placement");
-            ui.add(
-              Input::of("X:", &mut self.window_x)
-                .desired_width(35.0),
-            );
-            ui.add(
-              Input::of("Y:", &mut self.window_y)
-                .desired_width(35.0),
-            );
+            ui.add(Input::of("X:", &mut self.form.window_x).desired_width(35.0));
+            ui.add(Input::of("Y:", &mut self.form.window_y).desired_width(35.0));
           });
           ui.separator();
           ui.label("Default Search");
           ui.vertical(|ui| {
-            ui.add(Input::of("Label:", &mut self.webq_label).desired_width(200.0));
-            ui.add(Input::of("Template:", &mut self.webq_template).desired_width(400.0));
+            ui.add(Input::of("Label:", &mut self.form.webq_label).desired_width(200.0));
+            ui.add(Input::of("Template:", &mut self.form.webq_template).desired_width(400.0));
             ui.horizontal(|ui| {
               let img = self
+                .form
                 .webq_image
                 .value
-                .clone()
+                .as_ref()
+                .map(|v| v.0.clone())
                 .unwrap_or_else(|_| String::new());
-              ui.add(Input::of("Image:", &mut self.webq_image).desired_width(400.0));
+              ui.add(Input::of("Image:", &mut self.form.webq_image).desired_width(400.0));
               if !img.is_empty() {
                 ui.image(img);
               }
@@ -197,14 +154,14 @@ impl LyraSettings {
           });
           ui.separator();
           if ui.button("Save").clicked() {
-            if let Ok(res) = TryInto::<LyraSettingsFormResult>::try_into(&*self) {
+            if let Ok(res) = TryInto::<LyraSettingsFormFormResult>::try_into(&self.form) {
               self.config.update(move |mut inner| {
                 inner.styles.window_placement = Placement::XY(res.window_x.0, res.window_y.0);
                 inner.webq.default_searcher = Some(WebqSearchConfig {
-                  label: res.webq_label,
+                  label: res.webq_label.0,
                   shortname: "".into(),
                   template: res.webq_template,
-                  icon: res.webq_image,
+                  icon: res.webq_image.0,
                 })
                 // TODO: Add more fields
                 // inner.webq.searchers;
@@ -223,51 +180,14 @@ impl LyraSettings {
   }
 }
 
-// TODO: Separate crate https://stackoverflow.com/questions/73691794/expose-struct-generated-from-quote-macro-without-appearing-out-of-nowhere
-// TODO: Should parse & validate just be traits T should satisfy? Can newtype when the behavior is diff.
-//       That would also make the Input constructor simplified no wouldn't it :thinkies:
-struct FieldData<T: Clone + TryParse<Output = T> + Validate<Input = T>> {
-  buffer: String,
-  value: Result<T, String>,
-}
-
-trait TryParse {
-  type Output;
-  fn try_parse(v: &String) -> Result<Self::Output, String>;
-}
-
-trait Validate {
-  type Input;
-  fn validate(v: &Self::Input) -> Result<(), String>;
-}
-
-impl<T: ToString + Clone + TryParse<Output = T> + Validate<Input = T>> FieldData<T> {
-  pub fn new(value: T) -> FieldData<T> {
-    let buffer = value.to_string();
-    FieldData {
-      value: Ok(value),
-      buffer,
-    }
-  }
-
-  pub fn parse_and_validate(&mut self) {
-    self.value = <T as TryParse>::try_parse(&self.buffer);
-    if let Ok(v) = self.value.as_ref() {
-      if let Err(err) = <T as Validate>::validate(v) {
-        self.value = Err(err);
-      }
-    }
-  }
-}
-
-struct Input<'a, T: Clone + TryParse<Output = T> + Validate<Input = T>> {
+struct Input<'a, T: FormFieldData> {
   label: &'a str,
-  field: &'a mut FieldData<T>,
+  field: &'a mut FormField<T>,
   desired_width: Option<f32>,
 }
 
-impl<'a, T: Clone + TryParse<Output = T> + Validate<Input = T>> Input<'a, T> {
-  pub fn of(label: &'a str, field: &'a mut FieldData<T>) -> Input<'a, T> {
+impl<'a, T: FormFieldData> Input<'a, T> {
+  pub fn of(label: &'a str, field: &'a mut FormField<T>) -> Input<'a, T> {
     Input {
       label,
       field,
@@ -282,7 +202,7 @@ impl<'a, T: Clone + TryParse<Output = T> + Validate<Input = T>> Input<'a, T> {
   }
 }
 
-impl<'a, T: ToString + Clone + TryParse<Output = T> + Validate<Input = T>> Widget for Input<'a, T> {
+impl<'a, T: FormFieldData> Widget for Input<'a, T> {
   fn ui(self, ui: &mut egui::Ui) -> egui::Response {
     ui.allocate_ui_with_layout(
       ui.available_size(),

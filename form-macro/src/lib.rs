@@ -2,6 +2,30 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn;
 
+#[proc_macro_derive(FormFieldData)]
+pub fn form_field_data_derive(input: TokenStream) -> TokenStream {
+  let ast: syn::DeriveInput = syn::parse(input).unwrap();
+  let name = &ast.ident;
+  let gen = quote! {
+    impl FormFieldData for #name {}
+  };
+  gen.into()
+}
+
+#[proc_macro_derive(Validate)]
+pub fn validate_derive(input: TokenStream) -> TokenStream {
+  let ast: syn::DeriveInput = syn::parse(input).unwrap();
+  let name = &ast.ident;
+  let gen = quote! {
+    impl Validate for #name {
+      fn validate(v: &Self) -> Result<(), String> {
+        Ok(())
+      }
+    }
+  };
+  gen.into()
+}
+
 #[proc_macro_derive(FormResult)]
 pub fn form_result_derive(input: TokenStream) -> TokenStream {
   let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -45,7 +69,7 @@ pub fn form_result_derive(input: TokenStream) -> TokenStream {
     }
     impl TryFrom<&#name> for #form_name {
         type Error = String;
-        fn try_from(value: &LyraSettings) -> Result<Self, Self::Error> {
+        fn try_from(value: &#name) -> Result<Self, Self::Error> {
             Ok(#form_name {
                 #(#form_unwraps),*
             })
@@ -72,7 +96,7 @@ fn extract_field_data_type(ty: &syn::Type) -> Option<syn::Type> {
       ident,
       arguments:
         syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments { args, .. }),
-    } if ident == "FieldData" && args.len() == 1 => args,
+    } if ident == "FormField" && args.len() == 1 => args,
     _ => return None,
   };
 

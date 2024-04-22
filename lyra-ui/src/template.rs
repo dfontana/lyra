@@ -1,7 +1,8 @@
+use form::FormFieldData;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
-#[derive(Debug, Default, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Serialize, Deserialize, FormFieldData)]
 #[serde(try_from = "String", into = "String")]
 pub struct Template {
   val: String,
@@ -41,10 +42,10 @@ impl From<Template> for String {
   }
 }
 
-impl ToString for Template {
-    fn to_string(&self) -> String {
-        self.val.clone()
-    }
+impl Display for Template {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.val)
+  }
 }
 
 #[derive(PartialEq)]
