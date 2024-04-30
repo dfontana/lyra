@@ -70,6 +70,17 @@ impl LyraSettings {
         form.webq_template = FormField::new(webq.template.clone());
         form.webq_image = FormField::new(WebqImage(webq.icon.clone()));
       }
+      // TODO: Let's add support for web_searchers
+      //    What does this look like?
+      //    webq_searchers: FormField<Vec<WebqSearchConfig>>?
+      //    You want to be able to add a new row that's a blank FieldSet matching the
+      //        DefaultSearcher items, where it's validated and edited independent of all others
+      //    The whole thing can't be a FormField though as each field inside that vector wants to be
+      //        independently updated. Maybe you need a way to support container types in your macro.
+      //    Another option could be making a sub-form to edit each item in the table. That would be much easier
+      //        (click edit, and sidebar or pop-up form populates to edit that row). Trickiest part might be
+      //        preventing the form from saving if the subform isn't valid.
+      // form.web_searchers = &cfg.webq.searchers.values().clone();
     }
     LyraSettings {
       id: ViewportId::from_hash_of(LYRA_SETTINGS),
@@ -121,6 +132,10 @@ impl LyraSettings {
             });
           });
           ui.separator();
+          ui.label("Bookmarks");
+          if ui.button("Add bookmark").clicked() {
+            // push a default row, which should trigger invalid state?
+          }
           ui.horizontal(|ui| {
             TableBuilder::new(ui)
               .striped(true)
@@ -168,6 +183,10 @@ impl LyraSettings {
                 // inner.apps.app_paths;
                 // inner.apps.app_extension;
                 // inner.calc.prefix;
+                // Top level:
+                //  result_count
+                //  hotkey
+                //  styles
               })
             }
             if let Err(err) = self.config.persist() {
