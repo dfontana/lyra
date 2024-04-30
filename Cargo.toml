@@ -17,7 +17,9 @@ strip = true
 [workspace.dependencies]
 anyhow = "1.0.75"
 base64 = "0.21.5"
-egui = "0.25.0"
+egui = "0.27.2"
+eframe = "0.27.2"
+egui_extras = { version = "0.27.2", features = ["all_loaders"] }
 open = "5.0.1"
 parking_lot = "0.12.1"
 serde_json = "1.0"
@@ -27,4 +29,9 @@ toml = "0.8.8"
 tracing = "0.1.40"
 
 [patch.crates-io]
+eframe = { git = "https://github.com/dfontana/egui.git", branch = "dfontana-next" }
 egui = { git = "https://github.com/dfontana/egui.git", branch = "dfontana-next" }
+egui_extras = { git = "https://github.com/dfontana/egui.git", branch = "dfontana-next" }
+egui_glow = { git = "https://github.com/dfontana/egui.git", branch = "dfontana-next" }
+egui-winit = { git = "https://github.com/dfontana/egui.git", branch = "dfontana-next" }
+egui-wgpu = { git = "https://github.com/dfontana/egui.git", branch = "dfontana-next" }

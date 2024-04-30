@@ -22,11 +22,11 @@ impl LyraPowerbar {
     LyraPowerbar(Arc::new(RwLock::new(inner)))
   }
 
-  pub fn update(&mut self, ctx: &egui::Context) {
+  pub fn update(&mut self, ctx: &eframe::egui::Context) {
     self.0.write().update(ctx)
   }
 
-  pub fn close(&self, ctx: &egui::Context, vis: bool) {
+  pub fn close(&self, ctx: &eframe::egui::Context, vis: bool) {
     self.0.write().close(ctx, vis)
   }
 }
@@ -53,7 +53,7 @@ impl LyraPowerbarImpl {
     }
   }
 
-  pub fn close(&mut self, ctx: &egui::Context, vis: bool) {
+  pub fn close(&mut self, ctx: &eframe::egui::Context, vis: bool) {
     // TODO: So both TAO & Winit are issuing an orderOut command on MacOS
     // (https://developer.apple.com/documentation/appkit/nswindow/1419660-orderout)
     // but for some reason the previous application does not take focus. Tauri also
@@ -75,7 +75,7 @@ impl LyraPowerbarImpl {
     }
   }
 
-  pub fn update(&mut self, ctx: &egui::Context) {
+  pub fn update(&mut self, ctx: &eframe::egui::Context) {
     // Window does not play well auto-hiding on focus loss on Linux, so we'll
     // leave it as open until manually closed
     #[cfg(not(target_os = "linux"))]
@@ -204,7 +204,7 @@ fn is_nav_up(i: &InputState) -> bool {
 fn mk_text_edit<'t>(text: &'t mut dyn TextBuffer) -> TextEdit {
   TextEdit::singleline(text)
     .desired_width(f32::INFINITY)
-    .margin((0.0, 2.0).into())
+    .margin(egui::Vec2::from((0.0, 2.0)))
     .clip_text(true)
     .cursor_at_end(true)
     .vertical_align(Align::Center)

@@ -23,6 +23,7 @@ use powerbar::{LyraPowerbar, LyraPowerbarImpl};
 use settings::LyraSettings;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(not(target_os = "linux"))]
 use std::{cell::RefCell, rc::Rc};
 use tray_icon::menu::MenuId;
 use tray_icon::{
@@ -62,9 +63,9 @@ fn main() -> anyhow::Result<()> {
     "Lyra",
     eframe::NativeOptions {
       viewport: mk_viewport(bld.config.clone()),
-      event_loop_builder: Some(Box::new(|evlp| {
+      event_loop_builder: Some(Box::new(|_evlp| {
         #[cfg(target_os = "macos")]
-        evlp
+        _evlp
           .with_activation_policy(ActivationPolicy::Accessory)
           .with_activate_ignoring_other_apps(true);
       })),
@@ -162,8 +163,6 @@ fn init_event_listeners(
       }
     }
 
-    // BUG: (Linux) -> https://github.com/tauri-apps/tray-icon/issues/104
-    // tl;dr - Tray Click events don't work and actually segfault.
     if let Ok(event) = mu_receiver.try_recv() {
       if *event.id() == MenuId::new(SETTINGS_MENU_ID) {
         *settings_vis.write() = true;
@@ -201,9 +200,13 @@ fn mk_viewport(cfg: Arc<Config>) -> ViewportBuilder {
     .with_transparent(true)
     .with_active(true)
     .with_visible(true)
-    .with_icon(APP_ICON_ALT.clone())
     .with_min_inner_size(size)
     .with_inner_size(size);
+  if cfg!(not(target_os = "linux")) {
+    // TODO: This causes a SegFault when clicking the tray icon; it's not really
+    // clear why but it has to do with eframe dependency. For now just disable it..
+    bld = bld.with_icon(APP_ICON_ALT.clone());
+  }
   match window_placement {
     Placement::XY(x, y) => {
       bld = bld.with_position([x, y]);
