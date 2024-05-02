@@ -3,7 +3,6 @@ resolver = "2"
 members = [ 
   "form",
   "form-macro", 
-  "lyra-common",
   "lyra-ui",
 ]
 

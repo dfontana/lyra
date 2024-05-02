@@ -1,4 +1,5 @@
 mod config;
+mod icon_ui;
 mod launcher;
 mod logs;
 mod powerbar;

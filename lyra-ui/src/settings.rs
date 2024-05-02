@@ -8,6 +8,7 @@ use tracing::warn;
 
 use crate::{
   config::{Config, Placement, WebqSearchConfig},
+  icon_ui::Icon,
   template::Template,
 };
 
@@ -22,12 +23,24 @@ pub struct LyraSettings {
 }
 
 #[derive(FormResult, Default)]
+struct LyraWebqForm {
+  label: FormField<WebqLabel>,
+  shortname: FormField<WebqShortname>,
+  template: FormField<Template>,
+  image: FormField<WebqImage>,
+}
+
+#[derive(FormResult, Default)]
 struct LyraSettingsForm {
   window_x: FormField<WindowCoordinate>,
   window_y: FormField<WindowCoordinate>,
+  // Default searcher
   webq_label: FormField<WebqLabel>,
   webq_template: FormField<Template>,
   webq_image: FormField<WebqImage>,
+  // All other searchers & searcher form
+  searcher_form: LyraWebqForm,
+  webq_searchers: Vec<WebqSearchConfig>,
 }
 
 impl Validate for Template {
@@ -36,6 +49,9 @@ impl Validate for Template {
     Ok(())
   }
 }
+
+#[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
+struct WebqShortname(String);
 
 #[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
 struct WebqLabel(String);
@@ -70,17 +86,7 @@ impl LyraSettings {
         form.webq_template = FormField::new(webq.template.clone());
         form.webq_image = FormField::new(WebqImage(webq.icon.clone()));
       }
-      // TODO: Let's add support for web_searchers
-      //    What does this look like?
-      //    webq_searchers: FormField<Vec<WebqSearchConfig>>?
-      //    You want to be able to add a new row that's a blank FieldSet matching the
-      //        DefaultSearcher items, where it's validated and edited independent of all others
-      //    The whole thing can't be a FormField though as each field inside that vector wants to be
-      //        independently updated. Maybe you need a way to support container types in your macro.
-      //    Another option could be making a sub-form to edit each item in the table. That would be much easier
-      //        (click edit, and sidebar or pop-up form populates to edit that row). Trickiest part might be
-      //        preventing the form from saving if the subform isn't valid.
-      // form.web_searchers = &cfg.webq.searchers.values().clone();
+      form.webq_searchers = cfg.webq.searchers.values().map(|w| w.clone()).collect();
     }
     LyraSettings {
       id: ViewportId::from_hash_of(LYRA_SETTINGS),
@@ -94,6 +100,7 @@ impl LyraSettings {
 
 impl LyraSettings {
   pub fn update(&mut self, ctx: &egui::Context) {
+    // TODO: When the Setting UI is closed it shoudl reset the data inside it
     if !*self.visible.read() {
       return;
     }
@@ -118,23 +125,48 @@ impl LyraSettings {
             ui.add(Input::of("Label:", &mut self.form.webq_label).desired_width(200.0));
             ui.add(Input::of("Template:", &mut self.form.webq_template).desired_width(400.0));
             ui.horizontal(|ui| {
-              let img = self
-                .form
-                .webq_image
-                .value
-                .as_ref()
-                .map(|v| v.0.clone())
-                .unwrap_or_else(|_| String::new());
+              let mb_img = &self.form.webq_image.value;
+              let mb_lbl = &self.form.webq_label.value;
+              let mb_ico = mb_img.clone().and_then(|img| {
+                mb_lbl.clone().and_then(|lbl| {
+                  Icon::try_from((img.0.as_str(), lbl.0.as_str())).map_err(|e| e.to_string())
+                })
+              });
               ui.add(Input::of("Image:", &mut self.form.webq_image).desired_width(400.0));
-              if !img.is_empty() {
-                ui.image(img);
+              if let Ok(ico) = mb_ico {
+                ico.render(ui);
               }
             });
           });
           ui.separator();
           ui.label("Bookmarks");
+          ui.vertical(|ui| {
+            ui.add(Input::of("Label:", &mut self.form.searcher_form.label).desired_width(200.0));
+            ui.add(
+              Input::of("Shortname:", &mut self.form.searcher_form.shortname).desired_width(200.0),
+            );
+            ui.add(
+              Input::of("Template:", &mut self.form.searcher_form.template).desired_width(400.0),
+            );
+            ui.horizontal(|ui| {
+              let mb_img = &self.form.searcher_form.image.value;
+              let mb_lbl = &self.form.searcher_form.label.value;
+              let mb_ico = mb_img.clone().and_then(|img| {
+                mb_lbl.clone().and_then(|lbl| {
+                  Icon::try_from((img.0.as_str(), lbl.0.as_str())).map_err(|e| e.to_string())
+                })
+              });
+              ui.add(Input::of("Image:", &mut self.form.searcher_form.image).desired_width(400.0));
+              if let Ok(ico) = mb_ico {
+                ico.render(ui);
+              }
+            });
+          });
           if ui.button("Add bookmark").clicked() {
-            // push a default row, which should trigger invalid state?
+            if let Ok(_res) = TryInto::<LyraWebqFormFormResult>::try_into(&self.form.searcher_form)
+            {
+              // TODO: Push _res onto the searchers
+            }
           }
           ui.horizontal(|ui| {
             TableBuilder::new(ui)
@@ -146,15 +178,23 @@ impl LyraSettings {
               .column(Column::auto())
               .column(Column::auto())
               .column(Column::auto())
+              .column(Column::auto())
+              .column(Column::auto())
               .header(32f32, |mut r| {
                 r.col(|ui| {
                   ui.label("Label");
+                });
+                r.col(|ui| {
+                  ui.label("Shortname");
                 });
                 r.col(|ui| {
                   ui.label("Template");
                 });
                 r.col(|ui| {
                   ui.label("Image");
+                });
+                r.col(|ui| {
+                  ui.label("Edit");
                 });
                 r.col(|ui| {
                   ui.label("Delete");

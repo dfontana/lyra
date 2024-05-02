@@ -3,14 +3,14 @@ mod appcache;
 mod applookup;
 
 use crate::config::AppsConfig;
+use crate::icon_ui::Icon;
 use crate::plugin::{
   AppState, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable, SearchBlocker,
 };
 use anyhow::{anyhow, Context};
 use appcache::AppCache;
 use applookup::AppLookup;
-use egui::{Image, RichText};
-use lyra_common::convert as lyra_convert;
+use egui::RichText;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
 
@@ -30,17 +30,9 @@ pub struct AppLaunch {
 impl PluginValue for AppLaunch {}
 impl Renderable for AppLaunch {
   fn render(&self, ui: &mut egui::Ui, _state: &AppState) {
-    let icon = lyra_convert::parse_image_data(&self.icon)
-      .ok_or(anyhow!("Cannot render this image format"))
-      .and_then(|(s, ext)| lyra_convert::decode_bytes(&s).map(|b| (b, ext)));
-
     ui.horizontal(|ui| {
-      if let Ok((img, ext)) = icon {
-        ui.add(
-          Image::from_bytes(format!("bytes://{}.{}", self.label.to_string(), ext), img)
-            .maintain_aspect_ratio(true)
-            .shrink_to_fit(),
-        );
+      if let Ok(ico) = Icon::try_from((self.icon.as_str(), self.label.as_str())) {
+        ico.render(ui);
       }
       ui.label(RichText::new(&self.label));
     });

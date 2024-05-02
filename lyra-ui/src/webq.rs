@@ -1,11 +1,11 @@
 use crate::config::{WebqConfig, WebqSearchConfig};
+use crate::icon_ui::Icon;
 use crate::plugin::{
   AppState, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable, SearchBlocker,
 };
 use crate::template::Template;
 use anyhow::anyhow;
-use egui::{Image, RichText, Ui};
-use lyra_common::convert;
+use egui::{RichText, Ui};
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr, sync::Arc};
 
@@ -48,17 +48,9 @@ impl Renderable for Searcher {
   fn render(&self, ui: &mut Ui, _state: &AppState) {
     // TODO: We can render something better that shows the state of the
     //       hydrated template
-    let icon = convert::parse_image_data(&self.icon)
-      .ok_or(anyhow!("Cannot render image format"))
-      .and_then(|(s, ext)| convert::decode_bytes(&s).map(|b| (b, ext)));
-
     ui.horizontal(|ui| {
-      if let Ok((img, ext)) = icon {
-        ui.add(
-          Image::from_bytes(format!("bytes://{}.{}", self.label.to_string(), ext), img)
-            .maintain_aspect_ratio(true)
-            .shrink_to_fit(),
-        );
+      if let Ok(ico) = Icon::try_from((self.icon.as_str(), self.label.as_str())) {
+        ico.render(ui);
       }
       ui.label(RichText::new(&self.label));
     });
