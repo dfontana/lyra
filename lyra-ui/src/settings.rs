@@ -3,8 +3,8 @@ use egui::{Color32, Layout, Stroke, TextEdit, ViewportId, Widget};
 use egui_extras::{Column, TableBuilder};
 use form::{FormField, FormFieldData, FormResult, Validate};
 use parking_lot::RwLock;
-use std::sync::Arc;
-use tracing::warn;
+use std::{any::Any, rc::Rc, sync::Arc};
+use tracing::{instrument::WithSubscriber, warn};
 
 use crate::{
   config::{Config, Placement, WebqSearchConfig},
@@ -28,6 +28,14 @@ struct LyraWebqForm {
   shortname: FormField<WebqShortname>,
   template: FormField<Template>,
   image: FormField<WebqImage>,
+}
+impl LyraWebqForm {
+  fn clear(&mut self) {
+    self.label = FormField::new(WebqLabel::default());
+    self.shortname = FormField::new(WebqShortname::default());
+    self.template = FormField::new(Template::default());
+    self.image = FormField::new(WebqImage::default());
+  }
 }
 
 #[derive(FormResult, Default)]
@@ -163,47 +171,94 @@ impl LyraSettings {
             });
           });
           if ui.button("Add bookmark").clicked() {
-            if let Ok(_res) = TryInto::<LyraWebqFormFormResult>::try_into(&self.form.searcher_form)
-            {
-              // TODO: Push _res onto the searchers
+            if let Ok(res) = TryInto::<LyraWebqFormFormResult>::try_into(&self.form.searcher_form) {
+              self.form.webq_searchers.push(WebqSearchConfig {
+                label: res.label.0,
+                shortname: res.shortname.0,
+                template: res.template,
+                icon: res.image.0,
+              });
+              self.form.searcher_form.clear();
             }
           }
-          ui.horizontal(|ui| {
+          ui.vertical(|ui| {
             TableBuilder::new(ui)
               .striped(true)
               .resizable(false)
               .vscroll(true)
-              .auto_shrink(true)
-              .column(Column::auto())
-              .column(Column::auto())
-              .column(Column::auto())
-              .column(Column::auto())
-              .column(Column::auto())
-              .column(Column::auto())
-              .header(32f32, |mut r| {
-                r.col(|ui| {
-                  ui.label("Label");
-                });
-                r.col(|ui| {
-                  ui.label("Shortname");
-                });
-                r.col(|ui| {
-                  ui.label("Template");
-                });
-                r.col(|ui| {
-                  ui.label("Image");
-                });
-                r.col(|ui| {
-                  ui.label("Edit");
-                });
-                r.col(|ui| {
-                  ui.label("Delete");
-                });
+              .auto_shrink([false, true])
+              .column(Column::auto().at_least(100.0))
+              .column(Column::auto().at_least(100.0))
+              .column(Column::remainder().at_least(150.0))
+              .column(Column::exact(50.0))
+              .column(Column::exact(35.0))
+              .column(Column::exact(50.0))
+              .header(18.0, |mut r| {
+                for label in ["Label", "Shortname", "Template"] {
+                  r.col(|ui| {
+                    ui.horizontal_centered(|ui| {
+                      ui.label(label);
+                    });
+                  });
+                }
+                for label in ["Image", "Edit", "Delete"] {
+                  r.col(|ui| {
+                    ui.vertical_centered(|ui| {
+                      ui.label(label);
+                    });
+                  });
+                }
               })
               .body(|mut body| {
-                let rows = 100;
-                body.rows(32f32, rows, |mut row| {
-                  // TODO: Render row of data
+                body
+                  .ui_mut()
+                  .style_mut()
+                  .visuals
+                  .widgets
+                  .noninteractive
+                  .bg_stroke = Stroke::new(2.0, Color32::RED);
+                let rows = self.form.webq_searchers.len();
+                body.rows(18.0, rows, |mut row| {
+                  let idx = row.index();
+                  let data = self.form.webq_searchers.get(idx).unwrap();
+                  row.col(|ui| {
+                    ui.horizontal_centered(|ui| {
+                      ui.label(&data.label);
+                    });
+                  });
+                  row.col(|ui| {
+                    ui.horizontal_centered(|ui| {
+                      ui.label(&data.shortname);
+                    });
+                  });
+                  row.col(|ui| {
+                    ui.horizontal_centered(|ui| {
+                      ui.label(&data.template.to_string());
+                    });
+                  });
+                  row.col(|ui| {
+                    let mbico = Icon::try_from((data.icon.as_str(), data.label.as_str()))
+                      .map_err(|e| e.to_string());
+                    if let Ok(ico) = mbico {
+                      ui.horizontal_centered(|ui| {
+                        ico.render(ui);
+                      });
+                    }
+                  });
+                  row.col(|ui| {
+                    ui.vertical_centered(|ui| {
+                      if ui.button("Edit").clicked() {
+                        // TODO: Fill form
+                      }
+                    });
+                  });
+                  row.col(|ui| {
+                    ui.vertical_centered(|ui| {
+                      if ui.button("Delete").clicked() {
+                        self.form.webq_searchers.remove(idx);
+                      }
+                    });
+                  });
                 });
               });
           });
