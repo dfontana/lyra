@@ -1,16 +1,15 @@
 use derive_more::{Display, FromStr};
-use egui::{Color32, Event, Layout, Rounding, Sense, Stroke, TextEdit, Vec2, ViewportId, Widget};
+use egui::{Color32, Layout, Stroke, TextEdit, Vec2, ViewportId, Widget};
 use egui_extras::{Column, TableBuilder};
-use form::{FormField, FormFieldData, FormResult, Validate};
+use form::{FormField, FormFieldData, FormResult, TryParse, Validate};
 use global_hotkey::hotkey::HotKey;
-use itertools::Itertools;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tracing::warn;
 
 use crate::{
   config::{Config, Placement, WebqSearchConfig},
-  icon_ui::Icon,
+  icon_ui::{data_or_url, Icon},
   template::Template,
 };
 
@@ -59,8 +58,10 @@ struct LyraSettingsForm {
 
 impl Validate for Template {
   fn validate(v: &Self) -> Result<(), String> {
-    // TODO: Should not be allowed empty
-    Ok(())
+    match (*v).trim().is_empty() {
+      true => Err("Cannot be blank".into()),
+      false => Ok(()),
+    }
   }
 }
 
@@ -75,18 +76,37 @@ impl Validate for FormHotKey {
   }
 }
 
-// TODO: This should not be allowed empty, impl validate
-#[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
+#[derive(Clone, Default, Display, FromStr, FormFieldData)]
 struct WebqShortname(String);
+impl Validate for WebqShortname {
+  fn validate(v: &Self) -> Result<(), String> {
+    match v.0.trim().is_empty() {
+      true => Err("Cannot be blank".into()),
+      false => Ok(()),
+    }
+  }
+}
 
-// TODO: This should not be allowed empty, impl validate
-#[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
+#[derive(Clone, Default, Display, FromStr, FormFieldData)]
 struct WebqLabel(String);
+impl Validate for WebqLabel {
+  fn validate(v: &Self) -> Result<(), String> {
+    match v.0.trim().is_empty() {
+      true => Err("Cannot be blank".into()),
+      false => Ok(()),
+    }
+  }
+}
 
-// TODO: Should impl TryParse such that if a URL or data base64 is
-//       put into the field then a data url is made
-#[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
+#[derive(Clone, Default, Display, Validate, FormFieldData)]
 struct WebqImage(String);
+impl TryParse for WebqImage {
+  fn try_parse(v: &String) -> Result<Self, String> {
+    data_or_url(v)
+      .map(|v| WebqImage(v))
+      .map_err(|e| e.to_string())
+  }
+}
 
 #[derive(Clone, Default, Display, FormFieldData, FromStr)]
 struct WindowCoordinate(f32);
@@ -240,9 +260,9 @@ impl LyraSettings {
               .resizable(false)
               .vscroll(true)
               .auto_shrink([false, true])
-              .column(Column::auto().at_least(100.0))
-              .column(Column::auto().at_least(100.0))
-              .column(Column::remainder().at_least(150.0))
+              .column(Column::exact(100.0))
+              .column(Column::exact(100.0))
+              .column(Column::exact(210.0))
               .column(Column::exact(50.0))
               .column(Column::exact(35.0))
               .column(Column::exact(50.0))
@@ -330,8 +350,17 @@ impl LyraSettings {
           });
           ui.separator();
           if ui.button("Save").clicked() {
+            // TODO: Blank forms don't have their fields parse_and_validate
+            //       so they all start as valid in their initial state. You
+            //       should do that...
             match TryInto::<LyraSettingsFormFormResult>::try_into(&self.form) {
               Ok(res) => {
+                let searchers = self
+                  .form
+                  .webq_searchers
+                  .iter()
+                  .map(|s| (s.label.clone(), s.to_owned()))
+                  .collect();
                 self.config.update(move |mut inner| {
                   inner.styles.window_placement = Placement::XY(res.window_x.0, res.window_y.0);
                   inner.webq.default_searcher = Some(WebqSearchConfig {
@@ -340,13 +369,13 @@ impl LyraSettings {
                     template: res.webq_template,
                     icon: res.webq_image.0,
                   });
+                  inner.webq.searchers = searchers;
                   // TODO: Add more fields
                   // inner.apps.app_paths;
                   // inner.apps.app_extension;
                   // inner.calc.prefix;
                   // Top level:
                   //  result_count
-                  //  hotkey
                   //  styles
                 })
               }

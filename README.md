@@ -18,26 +18,17 @@
 
 Nearly there! Final polishes on MacOs before we can start focusing back on Linux/Windows experience.
 
-TODO - Tray icon segfaults on Linux. The tray-icon examples throw the same assertion failed error but do not segfault on click. This smells like maybe the issue is actually related to opening the dropdown menu. Will need to alter the examples more to explore
-
 ## Roadmap
 
 #### MVP 1: Calc, Bookmarks, Templatables, App Launcher (MacOS only)
 
-- Plugin Refactor:
-  - Finish implementing PluginManager
-  - Then implement Plugins
-  - Then need to refactor the UI to handle the new API
 - [ ] Setting input for remainder of config items
 - [ ] Lingering TODOs
-- [ ] App styling finalizations (Notably some blue background peeking through the input)
-  - [ ] Document stylesheet configuration setup & DOM structure
+- [ ] App styling finalizations
 - [ ] Release process for GH & homebrew tap
-- [ ] AppIcon Cache ought to live in it's own config file, given the size makes config editing hard
 
 #### MVP 2: Windows / Linux Support
 
-- [ ] Theming: Carefully evaluate css class names & HTML structure for more options
 - [ ] Selection improvements
   - Selected items should stay selected when search gets more specific. Example:
     - type "dash" (2+ results appear)
@@ -49,7 +40,6 @@ TODO - Tray icon segfaults on Linux. The tray-icon examples throw the same asser
   - AppIcon support
 - [ ] Linux works
   - App launcher can find... what now? .Desktop files?
-  - Finish enabling linux tray support https://tauri.studio/v1/guides/examples/system-tray/#linux-setup
   - AppIcon support
 
 #### MVP 3: File opener
@@ -63,13 +53,13 @@ TODO - Tray icon segfaults on Linux. The tray-icon examples throw the same asser
 
 - [ ] Configuration KeyBindings: open/hide/up/down/confirm
 - [ ] `Assets.car` support on MacOS for AppIcon resolving
-- [ ] Settings page validation & cleanup
-  - No spaces in shortnames for searchers, need links/labels/icons, templates validity, numbers are numbers etc
 - [ ] Allow configuration to reload without reboot (eg placing window)
 - [ ] Parse window placement better... below is bad. v bad.
   ```
   window_placement = { XY = {0 = 420.0, 1 = 100.0} }
   ```
+- [ ] Chatbot integration?
+- [ ] Clipboard history/management?
 
 ## Development
 
