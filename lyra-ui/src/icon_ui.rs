@@ -11,7 +11,7 @@ impl TryFrom<(&str, &str)> for Icon<'_> {
 
   fn try_from((value, label): (&str, &str)) -> Result<Self, Self::Error> {
     parse_image_data(value)
-      .ok_or(anyhow!("Cannot render image format"))
+      .ok_or(anyhow!("Cannot render image format {:?}", value))
       .and_then(|(s, ext)| decode_bytes(&s).map(|b| (b, ext)))
       .map(|(bytes, ext)| {
         Icon(Image::from_bytes(

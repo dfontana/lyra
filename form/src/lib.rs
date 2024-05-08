@@ -2,7 +2,11 @@ use std::{fmt::Display, str::FromStr};
 
 pub use form_macro::*;
 
-pub trait FormFieldData: Clone + Display + TryParse + Validate {}
+/// TryParse is needed to parse String back to {Self}, which {FromStr} is a blanket impl
+/// Validate is needed for types that can be parsed but need another validation (like an int being > 0)
+/// Default is _optional_ and will allow FormField<T>::default() to be called without needing to call FormField::new(T::default())
+/// Display is needed for FormField::new() since that needs to populate the buffer with an editable String from {Self}
+pub trait FormFieldData: Display + TryParse + Validate {}
 
 pub struct FormField<T: FormFieldData> {
   pub buffer: String,
@@ -17,7 +21,7 @@ pub trait Validate: Sized {
   fn validate(v: &Self) -> Result<(), String>;
 }
 
-impl<T: Display + FormFieldData> FormField<T> {
+impl<T: FormFieldData> FormField<T> {
   pub fn new(value: T) -> FormField<T> {
     let buffer = value.to_string();
     FormField {
@@ -42,7 +46,7 @@ impl<T: Default + Display + FormFieldData> Default for FormField<T> {
   }
 }
 
-impl<E: Display, F: FromStr<Err = E> + Display> TryParse for F {
+impl<E: Display, F: FromStr<Err = E>> TryParse for F {
   fn try_parse(v: &String) -> Result<Self, String> {
     FromStr::from_str(v).map_err(|err| format!("'{}' could not be parsed; {}", v, err))
   }

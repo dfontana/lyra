@@ -1,10 +1,12 @@
 use derive_more::{Display, FromStr};
-use egui::{Color32, Layout, Stroke, TextEdit, ViewportId, Widget};
+use egui::{Color32, Event, Layout, Rounding, Sense, Stroke, TextEdit, Vec2, ViewportId, Widget};
 use egui_extras::{Column, TableBuilder};
 use form::{FormField, FormFieldData, FormResult, Validate};
+use global_hotkey::hotkey::HotKey;
+use itertools::Itertools;
 use parking_lot::RwLock;
-use std::{any::Any, rc::Rc, sync::Arc};
-use tracing::{instrument::WithSubscriber, warn};
+use std::sync::Arc;
+use tracing::warn;
 
 use crate::{
   config::{Config, Placement, WebqSearchConfig},
@@ -28,13 +30,15 @@ struct LyraWebqForm {
   shortname: FormField<WebqShortname>,
   template: FormField<Template>,
   image: FormField<WebqImage>,
+  index: Option<usize>,
 }
 impl LyraWebqForm {
   fn clear(&mut self) {
-    self.label = FormField::new(WebqLabel::default());
-    self.shortname = FormField::new(WebqShortname::default());
-    self.template = FormField::new(Template::default());
-    self.image = FormField::new(WebqImage::default());
+    self.label = FormField::default();
+    self.shortname = FormField::default();
+    self.template = FormField::default();
+    self.image = FormField::default();
+    self.index = None;
   }
 }
 
@@ -42,6 +46,8 @@ impl LyraWebqForm {
 struct LyraSettingsForm {
   window_x: FormField<WindowCoordinate>,
   window_y: FormField<WindowCoordinate>,
+  // Globals
+  hotkey: FormField<FormHotKey>,
   // Default searcher
   webq_label: FormField<WebqLabel>,
   webq_template: FormField<Template>,
@@ -52,18 +58,33 @@ struct LyraSettingsForm {
 }
 
 impl Validate for Template {
-  fn validate(_v: &Self) -> Result<(), String> {
-    // TODO actually implement this, if there's anything left after parse
+  fn validate(v: &Self) -> Result<(), String> {
+    // TODO: Should not be allowed empty
     Ok(())
   }
 }
 
+#[derive(Clone, Default, Display, FromStr, FormFieldData)]
+struct FormHotKey(String);
+impl Validate for FormHotKey {
+  fn validate(v: &Self) -> Result<(), String> {
+    v.0
+      .parse::<HotKey>()
+      .map(|_| ())
+      .map_err(|e| format!("{}", e))
+  }
+}
+
+// TODO: This should not be allowed empty, impl validate
 #[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
 struct WebqShortname(String);
 
+// TODO: This should not be allowed empty, impl validate
 #[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
 struct WebqLabel(String);
 
+// TODO: Should impl TryParse such that if a URL or data base64 is
+//       put into the field then a data url is made
 #[derive(Clone, Default, Display, FromStr, Validate, FormFieldData)]
 struct WebqImage(String);
 
@@ -95,6 +116,7 @@ impl LyraSettings {
         form.webq_image = FormField::new(WebqImage(webq.icon.clone()));
       }
       form.webq_searchers = cfg.webq.searchers.values().map(|w| w.clone()).collect();
+      form.hotkey = FormField::new(FormHotKey(cfg.hotkey.parse().unwrap()));
     }
     LyraSettings {
       id: ViewportId::from_hash_of(LYRA_SETTINGS),
@@ -128,8 +150,12 @@ impl LyraSettings {
             ui.add(Input::of("Y:", &mut self.form.window_y).desired_width(35.0));
           });
           ui.separator();
-          ui.label("Default Search");
+          ui.horizontal_top(|ui| {
+            ui.add(Input::of("Hotkey:", &mut self.form.hotkey).desired_width(200.0));
+          });
+          ui.separator();
           ui.vertical(|ui| {
+            ui.label("Default Search");
             ui.add(Input::of("Label:", &mut self.form.webq_label).desired_width(200.0));
             ui.add(Input::of("Template:", &mut self.form.webq_template).desired_width(400.0));
             ui.horizontal(|ui| {
@@ -148,39 +174,66 @@ impl LyraSettings {
           });
           ui.separator();
           ui.label("Bookmarks");
-          ui.vertical(|ui| {
-            ui.add(Input::of("Label:", &mut self.form.searcher_form.label).desired_width(200.0));
-            ui.add(
-              Input::of("Shortname:", &mut self.form.searcher_form.shortname).desired_width(200.0),
+          ui.horizontal(|ui| {
+            ui.allocate_ui_with_layout(
+              Vec2::new(450.0, 200.0),
+              Layout::top_down(egui::Align::Min),
+              |ui| {
+                ui.add(Input::of("Label:", &mut self.form.searcher_form.label));
+                ui.add(Input::of(
+                  "Shortname:",
+                  &mut self.form.searcher_form.shortname,
+                ));
+                ui.add(Input::of(
+                  "Template:",
+                  &mut self.form.searcher_form.template,
+                ));
+                ui.add(
+                  Input::of("Image:", &mut self.form.searcher_form.image).desired_width(400.0),
+                );
+              },
             );
-            ui.add(
-              Input::of("Template:", &mut self.form.searcher_form.template).desired_width(400.0),
-            );
-            ui.horizontal(|ui| {
-              let mb_img = &self.form.searcher_form.image.value;
-              let mb_lbl = &self.form.searcher_form.label.value;
-              let mb_ico = mb_img.clone().and_then(|img| {
-                mb_lbl.clone().and_then(|lbl| {
-                  Icon::try_from((img.0.as_str(), lbl.0.as_str())).map_err(|e| e.to_string())
-                })
-              });
-              ui.add(Input::of("Image:", &mut self.form.searcher_form.image).desired_width(400.0));
-              if let Ok(ico) = mb_ico {
-                ico.render(ui);
-              }
+            let mb_img = &self.form.searcher_form.image.value;
+            let mb_lbl = &self.form.searcher_form.label.value;
+            let mb_ico = mb_img.clone().and_then(|img| {
+              mb_lbl.clone().and_then(|lbl| {
+                Icon::try_from((img.0.as_str(), lbl.0.as_str())).map_err(|e| e.to_string())
+              })
             });
+            if let Ok(ico) = mb_ico {
+              ico.render(ui);
+            }
           });
-          if ui.button("Add bookmark").clicked() {
-            if let Ok(res) = TryInto::<LyraWebqFormFormResult>::try_into(&self.form.searcher_form) {
-              self.form.webq_searchers.push(WebqSearchConfig {
-                label: res.label.0,
-                shortname: res.shortname.0,
-                template: res.template,
-                icon: res.image.0,
-              });
+          ui.horizontal(|ui| {
+            let text = if self.form.searcher_form.index == None {
+              "Add bookmark"
+            } else {
+              "Update bookmark"
+            };
+            if ui.button(text).clicked() {
+              let idx = self.form.searcher_form.index;
+              if let Ok(res) = TryInto::<LyraWebqFormFormResult>::try_into(&self.form.searcher_form)
+              {
+                let cfg = WebqSearchConfig {
+                  label: res.label.0,
+                  shortname: res.shortname.0,
+                  template: res.template,
+                  icon: res.image.0,
+                };
+                if let Some(id) = idx {
+                  self.form.webq_searchers.remove(id);
+                  self.form.webq_searchers.insert(id, cfg);
+                } else {
+                  self.form.webq_searchers.push(cfg);
+                }
+                self.form.searcher_form.clear();
+              }
+            }
+            if ui.button("Clear").clicked() {
               self.form.searcher_form.clear();
             }
-          }
+          });
+
           ui.vertical(|ui| {
             TableBuilder::new(ui)
               .striped(true)
@@ -248,13 +301,26 @@ impl LyraSettings {
                   row.col(|ui| {
                     ui.vertical_centered(|ui| {
                       if ui.button("Edit").clicked() {
-                        // TODO: Fill form
+                        self.form.searcher_form.label =
+                          FormField::new(WebqLabel(data.label.clone()));
+                        self.form.searcher_form.shortname =
+                          FormField::new(WebqShortname(data.shortname.clone()));
+                        self.form.searcher_form.template = FormField::new(data.template.clone());
+                        self.form.searcher_form.image =
+                          FormField::new(WebqImage(data.icon.clone()));
+                        self.form.searcher_form.index = Some(idx);
                       }
                     });
                   });
                   row.col(|ui| {
                     ui.vertical_centered(|ui| {
-                      if ui.button("Delete").clicked() {
+                      if ui
+                        .add_enabled(
+                          self.form.searcher_form.index == None,
+                          egui::Button::new("Delete"),
+                        )
+                        .clicked()
+                      {
                         self.form.webq_searchers.remove(idx);
                       }
                     });
@@ -264,28 +330,35 @@ impl LyraSettings {
           });
           ui.separator();
           if ui.button("Save").clicked() {
-            if let Ok(res) = TryInto::<LyraSettingsFormFormResult>::try_into(&self.form) {
-              self.config.update(move |mut inner| {
-                inner.styles.window_placement = Placement::XY(res.window_x.0, res.window_y.0);
-                inner.webq.default_searcher = Some(WebqSearchConfig {
-                  label: res.webq_label.0,
-                  shortname: "".into(),
-                  template: res.webq_template,
-                  icon: res.webq_image.0,
+            match TryInto::<LyraSettingsFormFormResult>::try_into(&self.form) {
+              Ok(res) => {
+                self.config.update(move |mut inner| {
+                  inner.styles.window_placement = Placement::XY(res.window_x.0, res.window_y.0);
+                  inner.webq.default_searcher = Some(WebqSearchConfig {
+                    label: res.webq_label.0,
+                    shortname: "".into(),
+                    template: res.webq_template,
+                    icon: res.webq_image.0,
+                  });
+                  // TODO: Add more fields
+                  // inner.apps.app_paths;
+                  // inner.apps.app_extension;
+                  // inner.calc.prefix;
+                  // Top level:
+                  //  result_count
+                  //  hotkey
+                  //  styles
                 })
-                // TODO: Add more fields
-                // inner.webq.searchers;
-                // inner.apps.app_paths;
-                // inner.apps.app_extension;
-                // inner.calc.prefix;
-                // Top level:
-                //  result_count
-                //  hotkey
-                //  styles
-              })
+              }
+              Err(err) => {
+                ui.colored_label(Color32::RED, format!("{}", err));
+              }
             }
             if let Err(err) = self.config.persist() {
               warn!("Failed to save config update: {}", err);
+              ui.colored_label(Color32::RED, format!("{}", err));
+            } else {
+              ui.colored_label(Color32::GREEN, "Saved!");
             }
           }
         });
