@@ -1,4 +1,4 @@
-use super::{appcache::AppCache, AppLaunch};
+use super::{appcache::AppsCache, AppLaunch};
 use crate::config::AppsConfig;
 use glob::glob;
 use std::{
@@ -8,7 +8,7 @@ use std::{
 
 pub struct AppLookup {
   pub config: AppsConfig,
-  pub cache: Arc<AppCache>,
+  pub cache: Arc<AppsCache>,
 }
 
 impl AppLaunch {
@@ -27,14 +27,14 @@ impl AppLaunch {
 }
 
 pub struct AppLookupIter<T> {
-  cache: Arc<AppCache>,
+  cache: Arc<AppsCache>,
   // Extension to look for in paths
   extension: String,
   // Remaining paths to inspect during iteration
   paths_remaining: Vec<PathBuf>,
   // Current glob being iterated over
   current: Option<glob::Paths>,
-  maker: Box<dyn Fn(PathBuf, &str, Arc<AppCache>) -> T>,
+  maker: Box<dyn Fn(PathBuf, &str, Arc<AppsCache>) -> T>,
 }
 
 impl AppLookup {

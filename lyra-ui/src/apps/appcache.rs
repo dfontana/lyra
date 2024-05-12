@@ -1,52 +1,21 @@
+use super::app_convert;
+use crate::cacher::Cache;
+use serde::{Deserialize, Serialize};
 use std::{
   collections::HashMap,
-  fs,
   path::{Path, PathBuf},
 };
 
-use parking_lot::RwLock;
-use serde::{Deserialize, Serialize};
-use tracing::info;
-
-use super::app_convert;
-
-#[derive(Default)]
-pub struct AppCache {
-  cache_file: PathBuf,
-  inner: RwLock<AppCacheInner>,
-}
+pub struct AppsCache(Cache<AppsData>);
 
 #[derive(Clone, Default, Deserialize, Serialize)]
-struct AppCacheInner {
+struct AppsData {
   pub app_icons: HashMap<String, String>,
 }
 
-impl AppCache {
-  pub fn load(file: PathBuf) -> Result<Self, anyhow::Error> {
-    let config = if !file.exists() {
-      info!(
-        "File missing, generating default at {}",
-        file.to_string_lossy()
-      );
-      let item = Self {
-        cache_file: file,
-        ..Self::default()
-      };
-      item.persist()?;
-      item
-    } else {
-      let inner: AppCacheInner = toml::from_str(&fs::read_to_string(&file)?)?;
-      Self {
-        cache_file: file,
-        inner: RwLock::new(inner),
-      }
-    };
-    Ok(config)
-  }
-
-  fn persist(&self) -> Result<(), anyhow::Error> {
-    fs::write(&self.cache_file, toml::to_string(&*self.inner.read())?)?;
-    Ok(())
+impl AppsCache {
+  pub fn init(cache_file: PathBuf) -> Result<Self, anyhow::Error> {
+    Cache::load(cache_file).map(|c| AppsCache(c))
   }
 
   pub fn get_app_icon(&self, updated: &Path) -> Result<String, anyhow::Error> {
@@ -55,8 +24,8 @@ impl AppCache {
     //      rather than waiting until next restart
     Ok(
       self
-        .inner
-        .read()
+        .0
+        .get()
         .app_icons
         .get(&key)
         .map(|v| v.to_string())
@@ -67,7 +36,7 @@ impl AppCache {
 
   pub fn update_app_icons(&self, updated: Vec<PathBuf>) -> Result<(), anyhow::Error> {
     let new_app_icons = {
-      let inner = self.inner.read();
+      let inner = self.0.get();
       let mut new_app_icons: HashMap<String, String> = updated
         .iter()
         .map(|p| (p.to_str().unwrap().to_string(), p))
@@ -82,7 +51,7 @@ impl AppCache {
       });
       new_app_icons
     };
-    self.inner.write().app_icons = new_app_icons;
-    self.persist()
+    self.0.update(|mut ad| ad.app_icons = new_app_icons);
+    self.0.persist()
   }
 }

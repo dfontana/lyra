@@ -1,7 +1,7 @@
-use crate::{plugin::PluginName, plugin_manager::PluginManager};
+use crate::{cacher::Cache, plugin::PluginName, plugin_manager::PluginManager};
 use anyhow::Context;
 use egui::{Color32, FontFamily, Margin, Rounding};
-use parking_lot::{RwLock, RwLockWriteGuard};
+use parking_lot::RwLockWriteGuard;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, ops::Deref, path::PathBuf};
 use tracing::{error, info};
@@ -10,8 +10,7 @@ use crate::template::Template;
 
 #[derive(Debug, Default)]
 pub struct Config {
-  pub config: RwLock<InnerConfig>,
-  file: PathBuf,
+  pub config: Cache<InnerConfig>,
   pub cache_dir: PathBuf,
   pub conf_dir: PathBuf,
 }
@@ -56,6 +55,7 @@ pub struct WebqSearchConfig {
   pub template: Template,
   // TODO: This should be normalized into a separate file since it makes editing the main config very hard/clogged up.
   //       If we just gave this a unique ID and then lookup from the other file it would be less painful
+  //       can use the cacher.rs type to help with this
   pub icon: String,
 }
 
@@ -154,43 +154,35 @@ impl Config {
   pub fn get_or_init_config() -> Result<Config, anyhow::Error> {
     let (conf_dir, cache_dir) = init_home()?;
     let conf_file = conf_dir.join("config.toml");
-    let config = if !conf_file.exists() {
+    let inner = if !conf_file.exists() {
       info!(
         "Config missing, generating default at {}",
         conf_file.to_string_lossy()
       );
-      let config = Config {
-        file: conf_file,
-        ..Config::default()
-      };
+      let config = Cache::<InnerConfig>::blank(conf_file);
       config.persist()?;
       config
     } else {
-      let inner: InnerConfig = toml::from_str(&fs::read_to_string(&conf_file)?)?;
-      Config {
-        config: RwLock::new(inner),
-        file: conf_file,
-        conf_dir,
-        cache_dir,
-      }
+      Cache::load(conf_file)?
     };
 
-    Ok(config)
+    Ok(Config {
+      config: inner,
+      conf_dir,
+      cache_dir,
+    })
   }
 
   pub fn get(&self) -> impl Deref<Target = InnerConfig> + '_ {
-    self.config.read()
+    self.config.get()
   }
 
   pub fn update<'a>(&'a self, func: impl FnOnce(RwLockWriteGuard<'a, InnerConfig>)) {
-    let inner = self.config.write();
-    func(inner);
+    self.config.update(func)
   }
 
   pub fn persist(&self) -> Result<(), anyhow::Error> {
-    let inner = self.config.read();
-    fs::write(&self.file, toml::to_string(&*inner)?)?;
-    Ok(())
+    self.config.persist()
   }
 }
 

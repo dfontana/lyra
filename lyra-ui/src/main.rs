@@ -1,3 +1,4 @@
+mod cacher;
 mod config;
 mod icon_ui;
 mod logs;

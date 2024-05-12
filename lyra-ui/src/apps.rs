@@ -8,11 +8,12 @@ use crate::plugin::{
   AppState, FuzzyMatchItem, OkAction, Plugin, PluginV, PluginValue, Renderable, SearchBlocker,
 };
 use anyhow::{anyhow, Context};
-use appcache::AppCache;
 use applookup::AppLookup;
 use egui::RichText;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
+
+use self::appcache::AppsCache;
 
 pub const PLUGIN_NAME: &'static str = "apps";
 
@@ -42,7 +43,7 @@ impl SearchBlocker for AppLaunch {}
 
 impl AppsPlugin {
   pub fn init(cfg: AppsConfig, cache_dir: &PathBuf) -> Result<Self, anyhow::Error> {
-    let cache = AppCache::load(cache_dir.join(format!("apps_icons.toml")))?;
+    let cache = AppsCache::init(cache_dir.join(format!("apps_icons.toml")))?;
     let apps = AppLookup {
       config: cfg.clone(),
       cache: Arc::new(cache),
