@@ -1,18 +1,19 @@
 use crate::{
-  plugin::{AppState, OkAction},
+  plugin::{AppState, OkAction, PluginV},
   plugin_manager::PluginManager,
 };
 use egui::{
   Align, Event, EventFilter, FontId, InputState, Key, Modifiers, TextBuffer, TextEdit, ViewportId,
 };
+use nucleo_matcher::{
+  pattern::{CaseMatching, Pattern},
+  Matcher,
+};
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tracing::error;
 
-use crate::{
-  config::{Config, Styles},
-  launcher::{self, Launcher},
-};
+use crate::config::{Config, Styles};
 
 #[derive(Clone)]
 pub struct LyraPowerbar(Arc<RwLock<LyraPowerbarImpl>>);
@@ -34,11 +35,40 @@ impl LyraPowerbar {
 pub struct LyraPowerbarImpl {
   pub state: AppState,
   pub plugins: PluginManager,
-  pub launcher: Launcher,
   pub config: Arc<Config>,
+  pub matcher: RwLock<Matcher>,
 }
 
 impl LyraPowerbarImpl {
+  pub fn get_options(&self, search: &str) -> Vec<PluginV> {
+    if search.is_empty() {
+      // Special case, empty string == nothing back instead of everything
+      return Vec::new();
+    }
+
+    Pattern::parse(search, CaseMatching::Ignore)
+      .match_list(
+        self
+          .plugins
+          .filter_to(&search)
+          .iter()
+          .flat_map(|pl| pl.options(search)),
+        &mut *self.matcher.write(),
+      )
+      .into_iter()
+      .take(self.config.get().result_count)
+      .map(|(v, _)| v)
+      .chain(
+        self
+          .plugins
+          .always_present(search)
+          .iter()
+          .flat_map(|pl| pl.static_items()),
+      )
+      .map(|sk| sk.value)
+      .collect()
+  }
+
   fn reset_state(&mut self) {
     self.state = AppState::default();
   }
@@ -157,7 +187,7 @@ impl LyraPowerbarImpl {
               .filter(|pv| pv.blocks_search(&self.state))
               .is_none()
             {
-              self.state.options = launcher::search(&self.launcher, &self.state.input);
+              self.state.options = self.get_options(&self.state.input);
               self.state.selected = 0;
               self.check_plugins_for_state_updates();
             }

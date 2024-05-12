@@ -1,6 +1,5 @@
 mod config;
 mod icon_ui;
-mod launcher;
 mod logs;
 mod powerbar;
 mod settings;
@@ -16,6 +15,7 @@ mod webq;
 use anyhow::anyhow;
 use egui::{IconData, ViewportBuilder, ViewportId};
 use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
+use nucleo_matcher::{Config as NucleoConfig, Matcher};
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use plugin::AppState;
@@ -35,7 +35,6 @@ use tray_icon::{
 use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
 
 use config::{Config, Placement, Styles};
-use launcher::Launcher;
 
 const SETTINGS_MENU_ID: &str = "settings";
 
@@ -95,14 +94,12 @@ fn main() -> anyhow::Result<()> {
 fn setup_app() -> Result<LyraUiBuilder, anyhow::Error> {
   logs::init_logs()?;
   let config = Config::get_or_init_config().map(Arc::new)?;
+  // TODO: maybe replace the PluginManager with just an enum
   let plugins = PluginManager::init(&config)?;
 
   Ok(LyraUiBuilder {
     config: config.clone(),
     plugins: plugins.clone(),
-    // TODO: Don't really need a launcher when I have the plugins. Perhaps remove?
-    // TODO: And maybe replace the PluginManager with just an enum
-    launcher: Launcher::new(config, plugins),
   })
 }
 
@@ -114,16 +111,18 @@ struct LyraUi {
 struct LyraUiBuilder {
   pub config: Arc<Config>,
   pub plugins: PluginManager,
-  pub launcher: Launcher,
 }
 
 impl LyraUiBuilder {
   fn build(self) -> LyraUi {
+    let mut cfg = NucleoConfig::DEFAULT;
+    cfg.ignore_case = true;
+    cfg.prefer_prefix = true;
     LyraUi {
       powerbar: LyraPowerbar::new(LyraPowerbarImpl {
         state: AppState::default(),
         plugins: self.plugins,
-        launcher: self.launcher,
+        matcher: RwLock::new(Matcher::new(cfg)),
         config: self.config.clone(),
       }),
       settings: LyraSettings::new(self.config.clone()),
