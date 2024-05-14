@@ -260,6 +260,8 @@ impl LyraSettings {
               .resizable(false)
               .vscroll(true)
               .auto_shrink([false, true])
+              .max_scroll_height(160.0)
+              .min_scrolled_height(160.0)
               .column(Column::exact(100.0))
               .column(Column::exact(100.0))
               .column(Column::exact(210.0))
