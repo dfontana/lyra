@@ -142,8 +142,10 @@ impl fmt::Debug for FuzzyMatchItem {
   }
 }
 
+#[derive(Default)]
 pub struct OkAction {
   pub close_win: bool,
+  pub update_input: Option<String>,
 }
 
 pub trait SearchBlocker {

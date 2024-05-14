@@ -126,7 +126,10 @@ impl Plugin for CalcPlugin {
         .clip
         .lock()
         .set_text(v)
-        .map(|_| OkAction { close_win: true })
+        .map(|_| OkAction {
+          close_win: true,
+          ..Default::default()
+        })
         .map_err(|e| anyhow!(e)),
       Evaluated::Err { .. } => Err(anyhow!("Can't take action on invalid calculation")),
     }

@@ -3,6 +3,7 @@ use crate::{
   plugin_manager::PluginManager,
 };
 use egui::{
+  text::{CCursor, CCursorRange},
   Align, Event, EventFilter, FontId, InputState, Key, Modifiers, TextBuffer, TextEdit, ViewportId,
 };
 use nucleo_matcher::{
@@ -119,6 +120,7 @@ impl LyraPowerbarImpl {
       return;
     }
 
+    // TODO: Wrap-around
     if ctx.input(is_nav_down) {
       self.state.selected =
         (self.state.selected + 1).min(self.state.options.len().checked_sub(1).unwrap_or(0));
@@ -130,10 +132,20 @@ impl LyraPowerbarImpl {
       self.check_plugins_for_state_updates();
     }
 
+    let mut input_changed = false;
     if ctx.input(|i| i.key_released(Key::Enter)) {
       if let Some(opt) = self.state.selected() {
         match self.plugins.try_launch(opt) {
-          Ok(OkAction { close_win: true }) => {
+          Ok(OkAction {
+            update_input: Some(inp),
+            ..
+          }) => {
+            self.state.input = inp;
+            input_changed = true;
+          }
+          Ok(OkAction {
+            close_win: true, ..
+          }) => {
             self.close(ctx, false);
             self.reset_state();
           }
@@ -176,10 +188,20 @@ impl LyraPowerbarImpl {
         ui.style_mut().override_font_id = Some(FontId::new(font_size, font_family));
 
         ui.vertical_centered(|ui| {
-          let res = mk_text_edit(&mut self.state.input).show(ui).response;
+          let mut output = mk_text_edit(&mut self.state.input).show(ui);
+
+          if input_changed {
+            // If we've manually changed the input we need to move the internal cursor
+            let max = CCursor::new(self.state.input.len());
+            let new_range = CCursorRange::one(max);
+            output.state.cursor.set_char_range(Some(new_range));
+            output.state.store(ui.ctx(), output.response.id);
+          }
+
+          let res = output.response;
           res.request_focus();
 
-          if res.changed() {
+          if res.changed() || input_changed {
             self.check_plugins_for_state_updates();
             if self
               .state
@@ -209,7 +231,7 @@ impl LyraPowerbarImpl {
             });
           }
 
-          if res.changed() {
+          if res.changed() || input_changed {
             let height = ui.min_rect().height() + (padding * 2.0);
             ctx.send_viewport_cmd_to(
               ViewportId::ROOT,

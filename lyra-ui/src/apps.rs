@@ -58,7 +58,10 @@ impl Plugin for AppsPlugin {
 
   fn action(&self, input: &AppLaunch) -> Result<OkAction, anyhow::Error> {
     open::that(input.path.clone())
-      .map(|_| OkAction { close_win: true })
+      .map(|_| OkAction {
+        close_win: true,
+        ..Default::default()
+      })
       .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", input.label, err))
   }
 

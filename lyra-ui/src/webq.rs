@@ -22,8 +22,6 @@ pub struct WebqPlugin {
   cfg: WebqConfig,
 }
 
-// TODO: Maybe this should be an enum modeling Templatable vs Not so the Template can be
-//       persisted
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Searcher {
   Bookmark(Metadata, String),
@@ -134,12 +132,12 @@ impl Plugin for WebqPlugin {
   }
 
   fn action(&self, input: &Searcher) -> Result<OkAction, anyhow::Error> {
-    if let Searcher::Template(_, ts) = input {
+    if let Searcher::Template(md, ts) = input {
       if !ts.state.is_complete() {
-        // TODO: Would be nice to enter templating mode on the selected
-        //       item, which will require updating the input to be the prefix
-        //       + a space & then updating template state
-        return Err(anyhow!("Templating is not complete"));
+        return Ok(OkAction {
+          close_win: false,
+          update_input: Some(format!("{} ", md.shortname)),
+        });
       }
     }
     let md = input.metadata();
@@ -149,7 +147,10 @@ impl Plugin for WebqPlugin {
     };
     target
       .and_then(|url| open::that(url).map_err(|err| err.into()))
-      .map(|_| OkAction { close_win: true })
+      .map(|_| OkAction {
+        close_win: true,
+        ..Default::default()
+      })
       .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", md.label, err))
   }
 
