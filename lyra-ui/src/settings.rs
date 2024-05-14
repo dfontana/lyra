@@ -257,14 +257,29 @@ impl LyraSettings {
           ui.vertical(|ui| {
             TableBuilder::new(ui)
               .striped(true)
-              .resizable(false)
+              .resizable(true)
               .vscroll(true)
               .auto_shrink([false, true])
               .max_scroll_height(160.0)
               .min_scrolled_height(160.0)
-              .column(Column::exact(100.0))
-              .column(Column::exact(100.0))
-              .column(Column::exact(210.0))
+              .column(
+                Column::initial(100.0)
+                  .clip(true)
+                  .at_least(20.0)
+                  .at_most(500.0),
+              )
+              .column(
+                Column::initial(100.0)
+                  .clip(true)
+                  .at_least(20.0)
+                  .at_most(500.0),
+              )
+              .column(
+                Column::initial(210.0)
+                  .clip(true)
+                  .at_least(20.0)
+                  .at_most(500.0),
+              )
               .column(Column::exact(50.0))
               .column(Column::exact(35.0))
               .column(Column::exact(50.0))

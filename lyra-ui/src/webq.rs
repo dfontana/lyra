@@ -22,12 +22,24 @@ pub struct WebqPlugin {
   cfg: WebqConfig,
 }
 
+// TODO: Maybe this should be an enum modeling Templatable vs Not so the Template can be
+//       persisted
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Searcher {
+pub enum Searcher {
+  Bookmark(Metadata, String),
+  Template(Metadata, TemplateData),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Metadata {
   pub label: String,
   pub shortname: String,
   pub icon: String,
-  pub required_args: usize,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TemplateData {
+  pub template: Template,
   #[serde(skip_serializing, skip_deserializing)]
   args: Vec<String>,
   #[serde(skip_serializing, skip_deserializing)]
@@ -38,7 +50,7 @@ impl PluginValue for Searcher {}
 impl SearchBlocker for Searcher {
   fn blocks_search(&self, state: &AppState) -> bool {
     state.options.iter().any(|opt| match opt {
-      PluginV::Webq(s) => s.state.templating() && !s.is_default(),
+      PluginV::Webq(s) => s.is_non_default_templating(),
       _ => false,
     })
   }
@@ -46,13 +58,20 @@ impl SearchBlocker for Searcher {
 
 impl Renderable for Searcher {
   fn render(&self, ui: &mut Ui, _state: &AppState) {
-    // TODO: We can render something better that shows the state of the
-    //       hydrated template
+    let md = self.metadata();
     ui.horizontal(|ui| {
-      if let Ok(ico) = Icon::try_from((self.icon.as_str(), self.label.as_str())) {
+      if let Ok(ico) = Icon::try_from((md.icon.as_str(), md.label.as_str())) {
         ico.render(ui);
       }
-      ui.label(RichText::new(&self.label));
+      if let Searcher::Template(_, td) = self {
+        ui.label(RichText::new(&format!(
+          "{}: {}",
+          md.label,
+          td.template.partial_hydrate(&td.args)
+        )));
+      } else {
+        ui.label(RichText::new(&md.label));
+      }
     });
   }
 }
@@ -90,20 +109,21 @@ impl Plugin for WebqPlugin {
       .collect();
 
     let is_templating = templates.iter().any(|opt| match opt {
-      PluginV::Webq(s) => s.state.templating() && !s.is_default(),
+      PluginV::Webq(s) => s.is_non_default_templating(),
       _ => false,
     });
 
     let mut new_state: AppState = (*state).clone();
     if is_templating {
       // TODO this will move selection every time templates
-      // update; should compute this to instead keep selected item
-      // if it's a templating item otherwise default to 0
+      // update if multiple match the same prefix or if you type space after partially matching
+      // the prefix. should compute this to instead keep selected item if it's a templating item
+      // otherwise default to 0 with the first one matching
       new_state.selected = 0;
       new_state.options = templates
         .into_iter()
         .filter(|opt| match opt {
-          PluginV::Webq(s) => s.state.templating() && !s.is_default(),
+          PluginV::Webq(s) => s.is_non_default_templating(),
           _ => false,
         })
         .collect();
@@ -114,29 +134,23 @@ impl Plugin for WebqPlugin {
   }
 
   fn action(&self, input: &Searcher) -> Result<OkAction, anyhow::Error> {
-    if !(input.is_bookmark() || input.state.is_complete()) {
-      // TODO: Would be nice to enter templating mode on the selected
-      //       item, which will require updating the input to be the prefix
-      //       + a space & then updating template state
-      return Err(anyhow!("Templating is not complete"));
+    if let Searcher::Template(_, ts) = input {
+      if !ts.state.is_complete() {
+        // TODO: Would be nice to enter templating mode on the selected
+        //       item, which will require updating the input to be the prefix
+        //       + a space & then updating template state
+        return Err(anyhow!("Templating is not complete"));
+      }
     }
-    self
-      .cfg
-      .searchers
-      .get(&input.label)
-      .or_else(|| {
-        // Check if it's the default real quick before bailing
-        self
-          .cfg
-          .default_searcher
-          .as_ref()
-          .filter(|sc| sc.label == input.label)
-      })
-      .ok_or_else(|| anyhow!("No such searcher"))
-      .and_then(|sh| sh.template.hydrate(&input.args).map_err(|err| err.into()))
+    let md = input.metadata();
+    let target: Result<String, anyhow::Error> = match input {
+      Searcher::Bookmark(_, target) => Ok(target.to_string()),
+      Searcher::Template(_, ts) => ts.template.hydrate(&ts.args).map_err(|err| err.into()),
+    };
+    target
       .and_then(|url| open::that(url).map_err(|err| err.into()))
       .map(|_| OkAction { close_win: true })
-      .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", input.label, err))
+      .map_err(|err| anyhow!("Action failed for {:?}, err: {:?}", md.label, err))
   }
 
   fn options(&self, _: &str) -> Vec<FuzzyMatchItem> {
@@ -157,13 +171,21 @@ impl Plugin for WebqPlugin {
 
 impl From<&WebqSearchConfig> for Searcher {
   fn from(sh: &WebqSearchConfig) -> Searcher {
-    Searcher {
+    let md = Metadata {
       label: sh.label.clone(),
       shortname: sh.shortname.clone(),
       icon: sh.icon.clone(),
-      required_args: sh.template.markers,
-      args: Vec::default(),
-      state: TemplatingState::default(),
+    };
+    match sh.template.markers == 0 {
+      true => Searcher::Bookmark(md, (*sh.template).to_string()),
+      false => Searcher::Template(
+        md,
+        TemplateData {
+          template: sh.template.clone(),
+          args: Vec::default(),
+          state: TemplatingState::default(),
+        },
+      ),
     }
   }
 }
@@ -172,7 +194,7 @@ impl From<&WebqSearchConfig> for FuzzyMatchItem {
   fn from(sh: &WebqSearchConfig) -> Self {
     let searcher = Into::<Searcher>::into(sh);
     FuzzyMatchItem {
-      against: Arc::new(searcher.shortname.clone()),
+      against: Arc::new(searcher.metadata().shortname.clone()),
       value: PluginV::Webq(searcher),
       source: PLUGIN_NAME.to_string(),
     }
@@ -187,36 +209,54 @@ enum TemplatingState {
   Complete,
 }
 
-impl Searcher {
-  fn is_bookmark(&self) -> bool {
-    self.required_args == 0
-  }
-
+impl Metadata {
   fn is_default(&self) -> bool {
     self.shortname.is_empty()
   }
+}
+
+impl Searcher {
+  fn is_non_default_templating(&self) -> bool {
+    match self {
+      Searcher::Bookmark(_, _) => false,
+      Searcher::Template(md, ts) => ts.state.templating() && !md.is_default(),
+    }
+  }
+
+  fn metadata(&self) -> &Metadata {
+    match self {
+      Searcher::Bookmark(md, _) => md,
+      Searcher::Template(md, _) => md,
+    }
+  }
 
   fn update(&self, inp: &String) -> Option<Searcher> {
-    if self.is_bookmark() {
-      return None;
-    }
-
-    let sn = self.shortname.as_str();
-    if self.is_default() {
+    let (md, td) = match self {
+      Searcher::Bookmark(_, _) => return None,
+      Searcher::Template(md, td) => (md, td),
+    };
+    let sn = md.shortname.as_str();
+    if md.is_default() {
       let args = Some(inp)
         .filter(|i| !i.is_empty())
         .map(|s| vec![s.to_string()]);
       return match args {
-        Some(args) => Some(Searcher {
-          state: TemplatingState::Complete,
-          args,
-          ..self.clone()
-        }),
-        None => Some(Searcher {
-          state: TemplatingState::NotStarted,
-          args: Vec::new(),
-          ..self.clone()
-        }),
+        Some(args) => Some(Searcher::Template(
+          md.clone(),
+          TemplateData {
+            state: TemplatingState::Complete,
+            args,
+            ..td.clone()
+          },
+        )),
+        None => Some(Searcher::Template(
+          md.clone(),
+          TemplateData {
+            state: TemplatingState::NotStarted,
+            args: Vec::new(),
+            ..td.clone()
+          },
+        )),
       };
     }
 
@@ -224,11 +264,11 @@ impl Searcher {
       Some((p, _)) if p == sn => {
         let args: Vec<String> = inp
           .trim()
-          .splitn(self.required_args + 1, ' ')
+          .splitn(td.template.markers + 1, ' ')
           .skip(1)
           .map(|s| s.to_owned())
           .collect();
-        let state = if args.len() == self.required_args {
+        let state = if args.len() == td.template.markers {
           TemplatingState::Complete
         } else {
           TemplatingState::Started
@@ -238,13 +278,16 @@ impl Searcher {
       None | Some(_) => (TemplatingState::NotStarted, Vec::new()),
     };
 
-    if self.state != state || self.args.len() != args.len() || self.args != args {
+    if td.state != state || td.args.len() != args.len() || td.args != args {
       // Updates detected
-      return Some(Searcher {
-        state,
-        args,
-        ..self.clone()
-      });
+      return Some(Searcher::Template(
+        md.clone(),
+        TemplateData {
+          state,
+          args,
+          ..td.clone()
+        },
+      ));
     }
     None
   }

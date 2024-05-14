@@ -26,6 +26,19 @@ impl Template {
     }
     Ok(hydration)
   }
+
+  pub fn partial_hydrate(&self, args: &Vec<String>) -> String {
+    let mut hydration = self.val.clone();
+    for idx in 0..self.markers {
+      let marker = format!("{{{}}}", idx);
+      if let Some(arg) = args.get(idx) {
+        hydration = hydration.replace(&marker, arg);
+      } else {
+        return hydration;
+      }
+    }
+    hydration
+  }
 }
 
 impl Deref for Template {
