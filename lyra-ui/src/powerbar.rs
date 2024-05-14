@@ -120,15 +120,21 @@ impl LyraPowerbarImpl {
       return;
     }
 
-    // TODO: Wrap-around
     if ctx.input(is_nav_down) {
-      self.state.selected =
-        (self.state.selected + 1).min(self.state.options.len().checked_sub(1).unwrap_or(0));
+      self.state.selected = Some(self.state.selected + 1)
+        .filter(|i| *i < self.state.options.len())
+        .unwrap_or(0);
+      // (self.state.selected + 1).min(self.state.options.len().checked_sub(1).unwrap_or(0));
       self.check_plugins_for_state_updates();
     }
 
     if ctx.input(is_nav_up) {
-      self.state.selected = self.state.selected.checked_sub(1).unwrap_or(0);
+      self.state.selected = self
+        .state
+        .selected
+        .checked_sub(1)
+        .or_else(|| self.state.options.len().checked_sub(1))
+        .unwrap_or(0);
       self.check_plugins_for_state_updates();
     }
 
